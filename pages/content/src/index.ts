@@ -1,6 +1,15 @@
-import { sampleFunction } from '@src/sampleFunction';
-
 console.log('content script loaded');
 
-// Shows how to call a function defined in another module
-sampleFunction();
+const injectContentScript = async () => {
+  document.addEventListener('click', async function (e) {
+    if (e.target instanceof HTMLElement) {
+      await chrome.runtime.sendMessage(e.target.innerText);
+    }
+  });
+};
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log(message);
+});
+
+injectContentScript();

@@ -1,4 +1,5 @@
 import { exampleThemeStorage } from '@extension/storage';
+import { aiSummaryStatus } from '@extension/storage';
 import { useStorage } from '@extension/shared';
 import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,7 @@ export const ToggleButton = ({ className, children, ...props }: ToggleButtonProp
         theme === 'light' ? 'border-black' : 'border-white',
         'mt-4 border-2 font-bold',
       )}
-      onClick={exampleThemeStorage.toggle}
+      onClick={aiSummaryStatus.toggle}
       {...props}>
       {children}
     </button>
