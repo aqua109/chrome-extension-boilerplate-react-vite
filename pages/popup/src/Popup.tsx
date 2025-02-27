@@ -1,12 +1,16 @@
 import '@src/Popup.css';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
-import { ToggleButton } from '@extension/ui';
+
+const EnablePageHighligher = async () => {
+  console.log('EnablePageHighligher-Popup');
+  await chrome.runtime.sendMessage({ type: 'enableDivHighlighting' });
+};
 
 const Popup = () => {
   return (
     <div className="App bg-slate-50">
       <header className="App-header text-gray-900">
-        <ToggleButton>Toggle AI Summary</ToggleButton>
+        <button onClick={() => EnablePageHighligher()}>Summarise T&Cs</button>
       </header>
     </div>
   );

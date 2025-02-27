@@ -2,28 +2,79 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { aiSummaryStatus } from '@extension/storage';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  queryGemini(request);
+  switch (request.type) {
+    case 'queryGemini':
+      queryGemini(request.data);
+
+    case 'enableDivHighlighting':
+      enableDivHighlighting();
+  }
 });
 
 const queryGemini = async (text: string) => {
-  let aiStatus = await aiSummaryStatus.get();
-  let response: string;
-  console.log(aiStatus);
+  const aiStatus = await aiSummaryStatus.get();
+  let summary: string;
 
   if (aiStatus === 'on') {
-    const genAI = new GoogleGenerativeAI('');
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+        generationConfig: { responseMimeType: 'application/json' },
+      });
 
-    const prompt = `Summerise ${text}`;
+      const queryPrompt = `For the given text, return a JSON object with the field 'containsTermsAndConditions' that is true if the text contains information relating to terms and conditions otherwise false. Text: "${text}"`;
+      const queryResult = await model.generateContent(queryPrompt);
+      const queryResponse = queryResult.response.text();
 
-    const result = await model.generateContent(prompt);
-    response = result.response.text();
+      type jsonKey = 'containstermsandconditions' | 'summary';
+      type jsonType = { [key in jsonKey]: string };
+
+      // reformats gemini response from:
+      //
+      // ```json
+      // {
+      //   "containsTermsAndConditions": true
+      // }
+      // ```
+      //
+      // into:
+      //
+      // {
+      //   "containstermsandconditions": true
+      // }
+      const queryJsonResponse: jsonType = JSON.parse(queryResponse.toLowerCase().replaceAll(/(`{3}json|`{3})/g, ''));
+      const queryKey: jsonKey = 'containstermsandconditions';
+
+      if (queryJsonResponse[queryKey]) {
+        const summaryPrompt = `Summerise the given text, returning the summary as a JSON object with the field 'summary'. Text:"${text}"`;
+        const summaryResult = await model.generateContent(summaryPrompt);
+        const summaryResponse = summaryResult.response.text();
+
+        const summaryJsonResponse: jsonType = JSON.parse(summaryResponse.replaceAll(/(`{3}json|`{3})/g, ''));
+        const summaryKey: jsonKey = 'summary';
+
+        summary = summaryJsonResponse[summaryKey];
+      } else {
+        console.log('Failed to find T&Cs');
+      }
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        console.log('AI response in unknown format');
+      }
+    }
   } else {
-    response = text.split('').reverse().join('');
+    summary = text.split('').reverse().join('');
   }
 
-  const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    chrome.tabs.sendMessage(tab.id!, response);
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+    chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: summary });
+  });
+};
+
+const enableDivHighlighting = async () => {
+  console.log('enableDivHighlighting-Background');
+  chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
+    await chrome.tabs.sendMessage(tab[0].id!, { type: 'enableDivHighlighting' });
   });
 };
