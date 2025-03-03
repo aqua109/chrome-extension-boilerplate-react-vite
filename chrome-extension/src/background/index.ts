@@ -5,15 +5,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'queryGemini':
       queryGemini(request.data);
+      break;
 
     case 'enableDivHighlighting':
       enableDivHighlighting();
+      break;
+
+    case 'disableDivHighlighting':
+      disableDivHighlighting();
+      break;
   }
 });
 
 const queryGemini = async (text: string) => {
   const aiStatus = await aiSummaryStatus.get();
-  let summary: string;
+  var summary: string = '';
 
   if (aiStatus === 'on') {
     try {
@@ -76,5 +82,12 @@ const enableDivHighlighting = async () => {
   console.log('enableDivHighlighting-Background');
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
     await chrome.tabs.sendMessage(tab[0].id!, { type: 'enableDivHighlighting' });
+  });
+};
+
+const disableDivHighlighting = async () => {
+  console.log('disableDivHighlighting-Background');
+  chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
+    await chrome.tabs.sendMessage(tab[0].id!, { type: 'disableDivHighlighting' });
   });
 };

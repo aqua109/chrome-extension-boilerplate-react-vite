@@ -1,17 +1,19 @@
 const enableClickToAISummary = async () => {
   console.log('enableClickToAISummary-content-script');
-  document.addEventListener('click', async function (e) {
-    if (e.target instanceof HTMLElement) {
-      await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText });
-      disableDivHighlighting();
-    }
-  });
+  document.addEventListener('click', clickListener);
 };
 
-const enableDivHighlighting = () => {
+const clickListener = async (e: MouseEvent) => {
+  if (e.target instanceof HTMLElement) {
+    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText });
+    disableDivHighlighting();
+  }
+};
+
+const enableDivHighlighting = async () => {
   console.log('enableDivHighlighting-content-script');
   const highlight = document.createElement('style');
-  // highlight.id = "highlight-style-element";
+  highlight.id = 'highlight-style-element';
   highlight.innerHTML =
     '.target-hover{background-color:rgba(81,17,176,0.2) !important;outline:2px solid #5111b0 !important;}';
   document.body.appendChild(highlight);
@@ -26,26 +28,33 @@ const enableDivHighlighting = () => {
       e.target.classList.remove('target-hover');
     }
   });
+
+  enableClickToAISummary();
 };
 
-const disableDivHighlighting = () => {
+const disableDivHighlighting = async () => {
   document.getElementById('highlight-style-element')?.remove();
+  document.removeEventListener('click', clickListener);
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'enableDivHighlighting':
       enableDivHighlighting();
+      break;
 
     case 'disableDivHighlighting':
       disableDivHighlighting();
+      break;
 
     case 'enableAISummary':
       enableClickToAISummary();
+      break;
 
     case 'aiSummaryReturned':
-      console.log(message.data);
+      if (message.data != '') {
+        console.log(message.data);
+      }
+      break;
   }
 });
-
-// enableClickToAISummary();
