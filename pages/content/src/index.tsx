@@ -1,3 +1,7 @@
+import { createRoot } from 'react-dom/client';
+import Modal from './modal';
+import injectedStyle from '@src/modal.css?inline';
+
 const enableClickToAISummary = async () => {
   console.log('enableClickToAISummary-content-script');
   document.addEventListener('click', clickListener);
@@ -5,8 +9,9 @@ const enableClickToAISummary = async () => {
 
 const clickListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
-    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText });
+    // await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText });
     disableDivHighlighting();
+    showModal();
   }
 };
 
@@ -58,3 +63,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
   }
 });
+
+const showModal = () => {
+  console.log('ShowModal');
+  const root = document.createElement('div');
+
+  document.body.append(root);
+
+  // const rootIntoShadow = document.createElement('div');
+  // rootIntoShadow.id = 'shadow-root';
+
+  // const shadowRoot = root.attachShadow({ mode: 'open' });
+
+  const styleElement = document.createElement('style');
+  console.log(injectedStyle);
+  styleElement.innerHTML = injectedStyle;
+  document.body.appendChild(styleElement);
+  // root.appendChild(styleElement);
+
+  // shadowRoot.appendChild(rootIntoShadow);
+  createRoot(root).render(<Modal text={'aaaaaaaaa'} />);
+};
