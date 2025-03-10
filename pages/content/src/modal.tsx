@@ -9,6 +9,14 @@ const Modal = (props: AISummary) => {
 
   const toggleModal = () => {
     setModal(!modal);
+
+    if (modal) {
+      var modalDiv = document.getElementById('ai-summary-modal');
+      modalDiv?.remove();
+
+      var modalStyle = document.getElementById('ai-summary-style');
+      modalStyle?.remove();
+    }
   };
 
   if (modal) {
