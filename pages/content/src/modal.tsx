@@ -20,9 +20,9 @@ const Modal = (props: AISummary) => {
   };
 
   if (modal) {
-    document.body.classList.add('active-modal');
+    document.documentElement.classList.add('active-modal');
   } else {
-    document.body.classList.remove('active-modal');
+    document.documentElement.classList.remove('active-modal');
   }
 
   return (
@@ -31,8 +31,8 @@ const Modal = (props: AISummary) => {
         <div className="modal">
           <div onClick={toggleModal} className="overlay"></div>
           <div className="modal-content">
-            <h2>Hello Modal</h2>
-            <p>{props.text}</p>
+            <h2>Terms & Conditions AI Summary</h2>
+            <p id="ai-summary-text">{props.text}</p>
             <button className="close-modal" onClick={toggleModal}>
               CLOSE
             </button>

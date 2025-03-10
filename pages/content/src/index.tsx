@@ -9,7 +9,7 @@ const enableClickToAISummary = async () => {
 
 const clickListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
-    // await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText });
+    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText });
     e.target.classList.remove('target-hover');
     disableDivHighlighting();
     showModal();
@@ -65,8 +65,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'aiSummaryReturned':
+      var summaryText = document.getElementById('ai-summary-text');
+
       if (message.data != '') {
         console.log(message.data);
+
+        if (summaryText) {
+          summaryText.textContent = message.data;
+        }
+      } else {
+        if (summaryText) {
+          summaryText.textContent = 'Unable to find any content related to terms and conditions in the selected text';
+        }
       }
       break;
   }
@@ -83,5 +93,5 @@ const showModal = () => {
   styleElement.textContent = injectedStyle;
   document.body.appendChild(styleElement);
 
-  createRoot(root).render(<Modal text={'aaaaaaaaa'} />);
+  createRoot(root).render(<Modal text={'Loading...'} />);
 };
