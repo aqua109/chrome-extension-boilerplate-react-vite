@@ -66,6 +66,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'aiSummaryReturned':
       var summaryText = document.getElementById('ai-summary-text');
+      var loader = document.getElementById('summary-loader');
+      loader?.remove();
 
       if (message.data != '') {
         console.log(message.data);
@@ -93,5 +95,5 @@ const showModal = () => {
   styleElement.textContent = injectedStyle;
   document.body.appendChild(styleElement);
 
-  createRoot(root).render(<Modal text={'Loading...'} />);
+  createRoot(root).render(<Modal text={''} />);
 };
