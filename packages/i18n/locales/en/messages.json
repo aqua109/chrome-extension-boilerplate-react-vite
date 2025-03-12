@@ -1,11 +1,11 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "Test Chrome Extension"
+    "message": "An extension to summarise website T&Cs"
   },
   "extensionName": {
     "description": "Extension name",
-    "message": "Test Chrome Extension"
+    "message": "PrivacyPal"
   },
   "toggleTheme": {
     "message": "Toggle theme"

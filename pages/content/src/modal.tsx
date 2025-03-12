@@ -41,7 +41,7 @@ const Modal = (props: AISummary) => {
             <p id="ai-summary-text">{props.text}</p>
             <BarLoader id="summary-loader" color="purple" loading={loading} aria-label="Loading AI Response" />
             <button className="close-modal" onClick={toggleModal}>
-              CLOSE
+              Close
             </button>
           </div>
         </div>
