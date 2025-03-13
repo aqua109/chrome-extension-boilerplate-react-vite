@@ -1,10 +1,11 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { aiSummaryStatus } from '@extension/storage';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'queryGemini':
-      queryGemini(request.data);
+      // queryGemini(request.data);
+      testingGeminiQueries(request.data);
       break;
 
     case 'enableDivHighlighting':
@@ -76,6 +77,51 @@ const queryGemini = async (text: string) => {
   chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
     chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: summary });
   });
+};
+
+const testingGeminiQueries = async (text: string) => {
+  try {
+    // const schema: any = {
+    //   description: "",
+    //   type: SchemaType.ARRAY,
+    //   items: {
+    //     type: SchemaType.OBJECT,
+    //     properties: {
+    //       sectionName: {
+    //         type: SchemaType.STRING,
+    //         description: 'Title of the section',
+    //       },
+    //       sentences: {
+    //         type: SchemaType.ARRAY,
+    //         description: 'Sentences which contain references to tracking or data collection',
+    //         items: {
+    //           type: SchemaType.STRING
+    //         }
+    //       },
+    //     },
+    //   },
+    // };
+
+    const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const queryPrompt = `For the given text, return a JSON object that denotes which sections contain references to tracking or data collection and the relevant text from these sections. Text: "${text}"`;
+    const queryResult = await model.generateContent(queryPrompt);
+    const queryResponse = queryResult.response.text();
+
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+      chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: queryResponse });
+    });
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.log('AI response in unknown format');
+    }
+  }
 };
 
 const enableDivHighlighting = async () => {
