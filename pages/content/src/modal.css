@@ -27,8 +27,9 @@
     background: #f3f4f6;
     padding: 14px 28px;
     border-radius: 3px;
-    max-width: 600px;
-    min-width: 600px;
+    width: 600px;
+    max-height: 600px;
+    overflow-y: auto;
     z-index: 1001;
 }
 
