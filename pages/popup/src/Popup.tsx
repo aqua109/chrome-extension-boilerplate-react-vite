@@ -3,9 +3,9 @@ import { withErrorBoundary, withSuspense } from '@extension/shared';
 
 const Popup = () => {
   const icon = 'popup/icon.svg';
-  const EnablePageHighlighter = async () => {
+  const EnablePageHighlighter = async (func: string) => {
     console.log('EnablePageHighligher-Popup');
-    await chrome.runtime.sendMessage({ type: 'enableDivHighlighting' });
+    await chrome.runtime.sendMessage({ type: 'enableDivHighlighting', func: func });
   };
 
   const DisablePageHighlighter = async () => {
@@ -23,8 +23,13 @@ const Popup = () => {
         <p> Summarise terms and conditions with Gemini AI</p>
         <button
           className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
-          onClick={() => EnablePageHighlighter()}>
+          onClick={() => EnablePageHighlighter('summarise')}>
           Summarise
+        </button>
+        <button
+          className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
+          onClick={() => EnablePageHighlighter('tracking')}>
+          Locate Tracking Data
         </button>
       </header>
     </div>

@@ -37,7 +37,7 @@ const Modal = (props: AISummary) => {
         <div className="modal">
           <div onClick={toggleModal} className="overlay"></div>
           <div className="modal-content">
-            <h2>Terms & Conditions AI Summary</h2>
+            <h2 id="ai-modal-title">Evaluating Query...</h2>
             <p id="ai-summary-text">{props.text}</p>
             <BarLoader id="summary-loader" color="purple" loading={loading} aria-label="Loading AI Response" />
             <button className="close-modal" onClick={toggleModal}>

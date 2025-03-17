@@ -4,12 +4,19 @@ import { aiSummaryStatus } from '@extension/storage';
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'queryGemini':
-      // queryGemini(request.data);
-      testingGeminiQueries(request.data);
+      switch (request.func) {
+        case 'summarise':
+          queryGemini(request.data);
+          break;
+
+        case 'tracking':
+          testingGeminiQueries(request.data);
+          break;
+      }
       break;
 
     case 'enableDivHighlighting':
-      enableDivHighlighting();
+      enableDivHighlighting(request.func);
       break;
 
     case 'disableDivHighlighting':
@@ -53,6 +60,8 @@ const queryGemini = async (text: string) => {
       const queryJsonResponse: jsonType = JSON.parse(queryResponse.toLowerCase().replaceAll(/(`{3}json|`{3})/g, ''));
       const queryKey: jsonKey = 'containstermsandconditions';
 
+      console.log(queryKey);
+
       if (queryJsonResponse[queryKey]) {
         const summaryPrompt = `Summerise the given text, returning the summary as a JSON object with the field 'summary'. Text:"${text}"`;
         const summaryResult = await model.generateContent(summaryPrompt);
@@ -75,32 +84,13 @@ const queryGemini = async (text: string) => {
   }
 
   chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-    chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: summary });
+    chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: summary, func: 'summarise' });
   });
 };
 
 const testingGeminiQueries = async (text: string) => {
   try {
-    // const schema: any = {
-    //   description: "",
-    //   type: SchemaType.ARRAY,
-    //   items: {
-    //     type: SchemaType.OBJECT,
-    //     properties: {
-    //       sectionName: {
-    //         type: SchemaType.STRING,
-    //         description: 'Title of the section',
-    //       },
-    //       sentences: {
-    //         type: SchemaType.ARRAY,
-    //         description: 'Sentences which contain references to tracking or data collection',
-    //         items: {
-    //           type: SchemaType.STRING
-    //         }
-    //       },
-    //     },
-    //   },
-    // };
+    var trackingJson: any;
 
     const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
@@ -110,12 +100,45 @@ const testingGeminiQueries = async (text: string) => {
       },
     });
 
-    const queryPrompt = `For the given text, return a JSON object that denotes which sections contain references to tracking or data collection and the relevant text from these sections. Text: "${text}"`;
+    const queryPrompt = `For the given text, return a JSON object with the field 'containsTracking' that is true if the text contains information relating to tracking or data collection otherwise false. Text: "${text}"`;
     const queryResult = await model.generateContent(queryPrompt);
     const queryResponse = queryResult.response.text();
 
+    type jsonKey = 'containstracking' | 'section' | 'summary';
+    type jsonType = { [key in jsonKey]: string };
+
+    // gemini response in format:
+    //
+    // {
+    //   "containsTracking":bool
+    // }
+
+    const queryJsonResponse: jsonType = JSON.parse(queryResponse.toLowerCase().replaceAll(/(`{3}json|`{3})/g, ''));
+    const queryKey: jsonKey = 'containstracking';
+
+    if (queryJsonResponse[queryKey]) {
+      const trackingPrompt = `For the given text, return a JSON object that denotes which sections contain references to tracking or data collection and the relevant text from these sections. Summarise the relevant text using this format: [ { "section": string, "summary": string } ] Text: "${text}"`;
+      const trackingResult = await model.generateContent(trackingPrompt);
+      const trackingResponse = trackingResult.response.text();
+
+      trackingJson = JSON.parse(trackingResponse.replaceAll(/(`{3}json|`{3})/g, ''));
+
+      for (let item of trackingJson) {
+        console.log(`section: ${item.section}, summary: ${item.summary}`);
+      }
+    } else {
+      console.log('Failed to find any details relating to tracking or data collection');
+    }
+
+    // gemini response in format:
+    //
+    // {
+    //   "section":string,
+    //   "summary":string
+    // }
+
     chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-      chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: queryResponse });
+      chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: trackingJson, func: 'tracking' });
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -124,15 +147,13 @@ const testingGeminiQueries = async (text: string) => {
   }
 };
 
-const enableDivHighlighting = async () => {
-  console.log('enableDivHighlighting-Background');
+const enableDivHighlighting = async (func: string) => {
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
-    await chrome.tabs.sendMessage(tab[0].id!, { type: 'enableDivHighlighting' });
+    await chrome.tabs.sendMessage(tab[0].id!, { type: 'enableDivHighlighting', func: func });
   });
 };
 
 const disableDivHighlighting = async () => {
-  console.log('disableDivHighlighting-Background');
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
     await chrome.tabs.sendMessage(tab[0].id!, { type: 'disableDivHighlighting' });
   });
