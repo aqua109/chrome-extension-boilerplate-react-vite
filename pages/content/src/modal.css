@@ -31,6 +31,8 @@
     max-height: 600px;
     overflow-y: auto;
     z-index: 1001;
+    font-family: Verdana, sans-serif;
+    box-sizing: content-box;
 }
 
 .close-modal {
@@ -44,12 +46,20 @@
     border: none;
 }
 
-h2 {
+.modal-title {
     font-size: 32px;
+    color: #374151;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 18px;
     color: #374151;
 }
 
-p {
+.section-text {
     font-size: 14px;
     color: #5F6774;
+    margin-bottom: 10px;
+    text-align: justify;
 }

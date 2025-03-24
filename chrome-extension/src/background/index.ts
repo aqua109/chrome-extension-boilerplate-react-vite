@@ -6,11 +6,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'queryGemini':
       switch (request.func) {
         case 'summarise':
-          queryGemini(request.data);
+          termsAndConditionsGeminiQuery(request.data);
           break;
 
         case 'tracking':
-          testingGeminiQueries(request.data);
+          trackingGeminiQuery(request.data);
           break;
       }
       break;
@@ -25,72 +25,102 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-const queryGemini = async (text: string) => {
-  const aiStatus = await aiSummaryStatus.get();
-  var summary: string = '';
+// For ease of testing added keyboard shortcuts
+chrome.commands.onCommand.addListener(function (command) {
+  switch (command) {
+    // Default Ctrl+Shift+1
+    case 'summarise':
+      enableDivHighlighting('summarise');
+      break;
 
-  if (aiStatus === 'on') {
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
-        generationConfig: { responseMimeType: 'application/json' },
-      });
-
-      const queryPrompt = `For the given text, return a JSON object with the field 'containsTermsAndConditions' that is true if the text contains information relating to terms and conditions otherwise false. Text: "${text}"`;
-      const queryResult = await model.generateContent(queryPrompt);
-      const queryResponse = queryResult.response.text();
-
-      type jsonKey = 'containstermsandconditions' | 'summary';
-      type jsonType = { [key in jsonKey]: string };
-
-      // reformats gemini response from:
-      //
-      // ```json
-      // {
-      //   "containsTermsAndConditions": true
-      // }
-      // ```
-      //
-      // into:
-      //
-      // {
-      //   "containstermsandconditions": true
-      // }
-      const queryJsonResponse: jsonType = JSON.parse(queryResponse.toLowerCase().replaceAll(/(`{3}json|`{3})/g, ''));
-      const queryKey: jsonKey = 'containstermsandconditions';
-
-      console.log(queryKey);
-
-      if (queryJsonResponse[queryKey]) {
-        const summaryPrompt = `Summerise the given text, returning the summary as a JSON object with the field 'summary'. Text:"${text}"`;
-        const summaryResult = await model.generateContent(summaryPrompt);
-        const summaryResponse = summaryResult.response.text();
-
-        const summaryJsonResponse: jsonType = JSON.parse(summaryResponse.replaceAll(/(`{3}json|`{3})/g, ''));
-        const summaryKey: jsonKey = 'summary';
-
-        summary = summaryJsonResponse[summaryKey];
-      } else {
-        console.log('Failed to find T&Cs');
-      }
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.log('AI response in unknown format');
-      }
-    }
-  } else {
-    summary = text.split('').reverse().join('');
+    // Default Ctrl+Shift+2
+    case 'tracking':
+      enableDivHighlighting('tracking');
+      break;
   }
+});
 
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-    chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: summary, func: 'summarise' });
-  });
+const termsAndConditionsGeminiQuery = async (text: string) => {
+  try {
+    interface geminiTermsAndConditionsResponse {
+      summary: Array<geminiSummaryObject>;
+    }
+
+    interface geminiSummaryObject {
+      agreement: string;
+      content: string;
+      usage: string;
+      intellectual_property: string;
+      user_content: string;
+      privacy: string;
+      liability: string;
+      governing_law: string;
+      privacy_implications: string;
+    }
+
+    let summaryJson: geminiTermsAndConditionsResponse;
+
+    const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+
+    const queryPrompt = `For the given text, return a JSON object with the field 'containsTermsAndConditions' that is true if the text contains information relating to terms and conditions otherwise false. Text: "${text}"`;
+    const queryResult = await model.generateContent(queryPrompt);
+    const queryResponse = queryResult.response.text();
+
+    type jsonKey = 'containstermsandconditions' | 'summary';
+    type jsonType = { [key in jsonKey]: string };
+
+    // reformats gemini response from:
+    //
+    // ```json
+    // {
+    //   "containsTermsAndConditions": true
+    // }
+    // ```
+    //
+    // into:
+    //
+    // {
+    //   "containstermsandconditions": true
+    // }
+    const queryJsonResponse: jsonType = JSON.parse(queryResponse.toLowerCase().replaceAll(/(`{3}json|`{3})/g, ''));
+    const queryKey: jsonKey = 'containstermsandconditions';
+
+    if (queryJsonResponse[queryKey]) {
+      const summaryPrompt = `Summarise the given text concisely (less than 100 words), in a structured way and provide 1-2 sentences on what this info means regarding the user's privacy. Use the following json schema as an example. Schema: {"summary":{"agreement":"text","content":"text","usage":"text","intellectual_property":"text","user_content":"text","privacy":"text","liability":"text","governing_law":"text","privacy_implications":"text"}}. Text: "${text}"`;
+      const summaryResult = await model.generateContent(summaryPrompt);
+      const summaryResponse = summaryResult.response.text();
+
+      summaryJson = JSON.parse(summaryResponse.replaceAll(/(`{3}json|`{3})/g, ''));
+
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+        chrome.tabs.sendMessage(tab[0].id!, {
+          type: 'aiSummaryReturned',
+          data: summaryJson.summary,
+          func: 'summarise',
+        });
+      });
+    } else {
+      console.log('Failed to find T&Cs');
+    }
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.log('AI response in unknown format');
+    }
+  }
 };
 
-const testingGeminiQueries = async (text: string) => {
+const trackingGeminiQuery = async (text: string) => {
   try {
-    var trackingJson: any;
+    interface geminiTrackingResponse {
+      section: string;
+      summary: string;
+    }
+
+    let trackingJson: geminiTrackingResponse;
 
     const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
@@ -122,10 +152,6 @@ const testingGeminiQueries = async (text: string) => {
       const trackingResponse = trackingResult.response.text();
 
       trackingJson = JSON.parse(trackingResponse.replaceAll(/(`{3}json|`{3})/g, ''));
-
-      for (let item of trackingJson) {
-        console.log(`section: ${item.section}, summary: ${item.summary}`);
-      }
     } else {
       console.log('Failed to find any details relating to tracking or data collection');
     }

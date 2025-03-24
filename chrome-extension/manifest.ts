@@ -63,6 +63,20 @@ const manifest = {
       matches: ['*://*/*'],
     },
   ],
+  commands: {
+    summarise: {
+      suggested_key: {
+        default: 'Ctrl+Shift+1',
+      },
+      description: 'Launches summarise function',
+    },
+    tracking: {
+      suggested_key: {
+        default: 'Ctrl+Shift+2',
+      },
+      description: 'Launches tracking locator function',
+    },
+  },
 } satisfies chrome.runtime.ManifestV3;
 
 export default manifest;

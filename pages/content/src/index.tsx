@@ -95,7 +95,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'summarise':
           modalTitle!.textContent = 'Terms & Conditions AI Summary';
           if (message.data != '') {
-            summaryText!.textContent = message.data;
+            Object.entries(message.data).forEach(([key, value]) => {
+              console.log(`${toTitleCase(key)} ${value}`);
+
+              formatSectionTextAndContent(toTitleCase(key), value as string);
+            });
           } else {
             summaryText!.textContent =
               'Unable to find any content related to terms and conditions in the selected text';
@@ -106,7 +110,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           modalTitle!.textContent = 'Tracking & Data Collection References';
           if (message.data != '') {
             for (let item of message.data) {
-              console.log(`section: ${item.section}, summary: ${item.summary}`);
+              formatSectionTextAndContent(toTitleCase(item.section), item.summary);
             }
           } else {
             summaryText!.textContent =
@@ -117,6 +121,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
   }
 });
+
+const formatSectionTextAndContent = (title: string, text: string) => {
+  var sectionTitle = document.createElement('div');
+  sectionTitle.setAttribute('class', 'section-title');
+  sectionTitle.textContent = title;
+  var sectionText = document.createElement('div');
+  sectionText.setAttribute('class', 'section-text');
+  sectionText.textContent = text;
+
+  var modalContent = document.getElementById('ai-modal-content');
+  modalContent!.appendChild(sectionTitle);
+  modalContent!.appendChild(sectionText);
+};
 
 const showModal = () => {
   const root = document.createElement('div');
@@ -129,4 +146,18 @@ const showModal = () => {
   document.body.appendChild(styleElement);
 
   createRoot(root).render(<Modal text={''} />);
+};
+
+// https://medium.com/@sankarums/convert-a-string-to-title-case-in-typescript-742bfd869cb9
+// also removes underscores
+// e.g. 'privacy_implications' -> 'Privacy Implications'
+const toTitleCase = (title: string) => {
+  return title
+    .replace('_', ' ')
+    .toLowerCase()
+    .split(' ')
+    .map((word: any) => {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 };

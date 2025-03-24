@@ -4,12 +4,10 @@ import { withErrorBoundary, withSuspense } from '@extension/shared';
 const Popup = () => {
   const icon = 'popup/icon.svg';
   const EnablePageHighlighter = async (func: string) => {
-    console.log('EnablePageHighligher-Popup');
     await chrome.runtime.sendMessage({ type: 'enableDivHighlighting', func: func });
   };
 
   const DisablePageHighlighter = async () => {
-    console.log('DisablePageHighligher-Popup');
     await chrome.runtime.sendMessage({ type: 'disableDivHighlighting' });
   };
 
