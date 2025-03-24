@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-import { aiSummaryStatus } from '@extension/storage';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
@@ -41,25 +40,25 @@ chrome.commands.onCommand.addListener(function (command) {
 });
 
 const termsAndConditionsGeminiQuery = async (text: string) => {
+  interface geminiTermsAndConditionsResponse {
+    summary: Array<geminiSummaryObject>;
+  }
+
+  interface geminiSummaryObject {
+    agreement: string;
+    content: string;
+    usage: string;
+    intellectual_property: string;
+    user_content: string;
+    privacy: string;
+    liability: string;
+    governing_law: string;
+    privacy_implications: string;
+  }
+
+  let summaryJson: geminiTermsAndConditionsResponse;
+
   try {
-    interface geminiTermsAndConditionsResponse {
-      summary: Array<geminiSummaryObject>;
-    }
-
-    interface geminiSummaryObject {
-      agreement: string;
-      content: string;
-      usage: string;
-      intellectual_property: string;
-      user_content: string;
-      privacy: string;
-      liability: string;
-      governing_law: string;
-      privacy_implications: string;
-    }
-
-    let summaryJson: geminiTermsAndConditionsResponse;
-
     const genAI = new GoogleGenerativeAI(process.env.CEB_GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash',
@@ -95,17 +94,17 @@ const termsAndConditionsGeminiQuery = async (text: string) => {
       const summaryResponse = summaryResult.response.text();
 
       summaryJson = JSON.parse(summaryResponse.replaceAll(/(`{3}json|`{3})/g, ''));
-
-      chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-        chrome.tabs.sendMessage(tab[0].id!, {
-          type: 'aiSummaryReturned',
-          data: summaryJson.summary,
-          func: 'summarise',
-        });
-      });
     } else {
       console.log('Failed to find T&Cs');
     }
+
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+      chrome.tabs.sendMessage(tab[0].id!, {
+        type: 'aiSummaryReturned',
+        data: typeof summaryJson?.summary !== 'undefined' ? summaryJson.summary : '',
+        func: 'summarise',
+      });
+    });
   } catch (error) {
     if (error instanceof SyntaxError) {
       console.log('AI response in unknown format');

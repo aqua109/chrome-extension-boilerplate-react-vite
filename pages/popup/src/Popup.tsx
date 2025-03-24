@@ -7,10 +7,6 @@ const Popup = () => {
     await chrome.runtime.sendMessage({ type: 'enableDivHighlighting', func: func });
   };
 
-  const DisablePageHighlighter = async () => {
-    await chrome.runtime.sendMessage({ type: 'disableDivHighlighting' });
-  };
-
   return (
     <div className="App bg-gray-100">
       <header className="App-header text-gray-500 mb-3">

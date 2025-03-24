@@ -87,7 +87,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'aiSummaryReturned':
       var modalTitle = document.getElementById('ai-modal-title');
-      var summaryText = document.getElementById('ai-summary-text');
       var loader = document.getElementById('summary-loader');
       loader?.remove();
 
@@ -96,25 +95,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           modalTitle!.textContent = 'Terms & Conditions AI Summary';
           if (message.data != '') {
             Object.entries(message.data).forEach(([key, value]) => {
-              console.log(`${toTitleCase(key)} ${value}`);
-
               formatSectionTextAndContent(toTitleCase(key), value as string);
             });
           } else {
-            summaryText!.textContent =
-              'Unable to find any content related to terms and conditions in the selected text';
+            formatSectionTextAndContent(
+              '',
+              'Unable to find any content related to terms and conditions in the selected text',
+            );
           }
           break;
 
         case 'tracking':
           modalTitle!.textContent = 'Tracking & Data Collection References';
-          if (message.data != '') {
+          if (message.data != '' && typeof message.data !== 'undefined') {
             for (let item of message.data) {
               formatSectionTextAndContent(toTitleCase(item.section), item.summary);
             }
           } else {
-            summaryText!.textContent =
-              'Unable to find any content related to tracking or data collection in the selected text';
+            formatSectionTextAndContent(
+              '',
+              'Unable to find any content related to tracking or data collection in the selected text',
+            );
           }
           break;
       }
