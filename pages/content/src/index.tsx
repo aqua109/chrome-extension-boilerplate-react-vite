@@ -17,7 +17,7 @@ const enableClickToAISummary = async (func: string) => {
 const summariseClickListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
     await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'summarise' });
-    e.target.classList.remove('target-hover');
+    e.target.classList.remove('pp-target-hover');
     disableDivHighlighting();
     showModal();
   }
@@ -26,7 +26,7 @@ const summariseClickListener = async (e: MouseEvent) => {
 const trackingClickListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
     await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'tracking' });
-    e.target.classList.remove('target-hover');
+    e.target.classList.remove('pp-target-hover');
     disableDivHighlighting();
     showModal();
   }
@@ -34,13 +34,13 @@ const trackingClickListener = async (e: MouseEvent) => {
 
 const mouseOverListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
-    e.target.classList.add('target-hover');
+    e.target.classList.add('pp-target-hover');
   }
 };
 
 const mouseOutListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
-    e.target.classList.remove('target-hover');
+    e.target.classList.remove('pp-target-hover');
   }
 };
 
@@ -51,12 +51,12 @@ const enableDivHighlighting = async (func: string) => {
   switch (func) {
     case 'summarise':
       highlight.innerHTML =
-        '.target-hover{background-color:rgba(81,17,176,0.2) !important;outline:2px solid #5111b0 !important;}';
+        '.pp-target-hover{background-color:rgba(81,17,176,0.2) !important;outline:2px solid #5111b0 !important;}';
       break;
 
     case 'tracking':
       highlight.innerHTML =
-        '.target-hover{background-color:rgba(15,18,242,0.2) !important;outline:2px solid #0f12f2 !important;}';
+        '.pp-target-hover{background-color:rgba(15,18,242,0.2) !important;outline:2px solid #0f12f2 !important;}';
       break;
   }
 
@@ -125,10 +125,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 const formatSectionTextAndContent = (title: string, text: string) => {
   var sectionTitle = document.createElement('div');
-  sectionTitle.setAttribute('class', 'section-title');
+  sectionTitle.setAttribute('class', 'pp-section-title');
   sectionTitle.textContent = title;
   var sectionText = document.createElement('div');
-  sectionText.setAttribute('class', 'section-text');
+  sectionText.setAttribute('class', 'pp-section-text');
   sectionText.textContent = text;
 
   var modalContent = document.getElementById('ai-modal-content');

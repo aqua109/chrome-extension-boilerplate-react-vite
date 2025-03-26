@@ -26,22 +26,22 @@ const Modal = (props: AISummary) => {
   };
 
   if (modal) {
-    document.documentElement.classList.add('active-modal');
+    document.documentElement.classList.add('pp-active-modal');
   } else {
-    document.documentElement.classList.remove('active-modal');
+    document.documentElement.classList.remove('pp-active-modal');
   }
 
   return (
     <>
       {modal && (
-        <div className="modal">
-          <div onClick={toggleModal} className="overlay"></div>
-          <div className="modal-content" id="ai-modal-content">
-            <div className="modal-title" id="ai-modal-title">
+        <div className="pp-modal">
+          <div onClick={toggleModal} className="pp-overlay"></div>
+          <div className="pp-modal-content" id="ai-modal-content">
+            <div className="pp-modal-title" id="ai-modal-title">
               Evaluating Query...
             </div>
             <BarLoader id="summary-loader" color="purple" loading={loading} aria-label="Loading AI Response" />
-            <button className="close-modal" onClick={toggleModal}>
+            <button className="pp-close-modal" onClick={toggleModal}>
               Close
             </button>
           </div>
