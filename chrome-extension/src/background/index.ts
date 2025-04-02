@@ -99,15 +99,20 @@ const termsAndConditionsGeminiQuery = async (text: string) => {
     }
 
     chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-      chrome.tabs.sendMessage(tab[0].id!, {
-        type: 'aiSummaryReturned',
-        data: typeof summaryJson?.summary !== 'undefined' ? summaryJson.summary : '',
-        func: 'summarise',
-      });
+      if (tab[0] != null) {
+        chrome.tabs.sendMessage(tab[0].id!, {
+          type: 'aiSummaryReturned',
+          data: typeof summaryJson?.summary !== 'undefined' ? summaryJson.summary : '',
+          func: 'summarise',
+        });
+      }
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
       console.log('AI response in unknown format');
+    }
+    if (error instanceof TypeError) {
+      console.log('aaaaaaaa');
     }
   }
 };
@@ -163,7 +168,9 @@ const trackingGeminiQuery = async (text: string) => {
     // }
 
     chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-      chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: trackingJson, func: 'tracking' });
+      if (tab[0] != null) {
+        chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: trackingJson, func: 'tracking' });
+      }
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -174,12 +181,16 @@ const trackingGeminiQuery = async (text: string) => {
 
 const enableDivHighlighting = async (func: string) => {
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
-    await chrome.tabs.sendMessage(tab[0].id!, { type: 'enableDivHighlighting', func: func });
+    if (tab[0] != null) {
+      await chrome.tabs.sendMessage(tab[0].id!, { type: 'enableDivHighlighting', func: func });
+    }
   });
 };
 
 const disableDivHighlighting = async () => {
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
-    await chrome.tabs.sendMessage(tab[0].id!, { type: 'disableDivHighlighting' });
+    if (tab[0] != null) {
+      await chrome.tabs.sendMessage(tab[0].id!, { type: 'disableDivHighlighting' });
+    }
   });
 };
