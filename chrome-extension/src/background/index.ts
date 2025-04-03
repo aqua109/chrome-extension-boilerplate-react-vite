@@ -89,7 +89,7 @@ const termsAndConditionsGeminiQuery = async (text: string) => {
     const queryKey: jsonKey = 'containstermsandconditions';
 
     if (queryJsonResponse[queryKey]) {
-      const summaryPrompt = `Summarise the given text concisely (less than 100 words), in a structured way and provide 1-2 sentences on what this info means regarding the user's privacy. Use the following json schema as an example. Schema: {"summary":{"agreement":"text","content":"text","usage":"text","intellectual_property":"text","user_content":"text","privacy":"text","liability":"text","governing_law":"text","privacy_implications":"text"}}. Text: "${text}"`;
+      const summaryPrompt = `Summarise the given text concisely (less than 100 words), in a structured way and provide 1-2 sentences on what this info means regarding the user's privacy. If a section is not specified or applicable remove it from the json. Replace " with '. Use the following json schema as an example. Schema: {"summary":{"agreement":"text","content":"text","usage":"text","intellectual_property":"text","user_content":"text","privacy":"text","liability":"text","governing_law":"text","privacy_implications":"text"}}. Text: "${text}"`;
       const summaryResult = await model.generateContent(summaryPrompt);
       const summaryResponse = summaryResult.response.text();
 

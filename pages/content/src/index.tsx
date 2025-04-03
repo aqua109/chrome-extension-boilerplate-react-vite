@@ -95,7 +95,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           modalTitle!.textContent = 'Terms & Conditions AI Summary';
           if (message.data != '') {
             Object.entries(message.data).forEach(([key, value]) => {
-              formatSectionTextAndContent(toTitleCase(key), value as string);
+              if ((value as string).length > 10) {
+                formatSectionTextAndContent(toTitleCase(key), value as string);
+              }
             });
           } else {
             formatSectionTextAndContent(
