@@ -39,6 +39,7 @@
     "module-manager": "pnpm -F module-manager start"
   },
   "dependencies": {
+    "@ghostery/trackerdb": "^1.0.502",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-spinners": "^0.15.0"
