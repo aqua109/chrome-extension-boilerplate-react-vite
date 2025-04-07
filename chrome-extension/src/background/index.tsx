@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import loadTrackerDB from '@ghostery/trackerdb';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
@@ -21,6 +22,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'disableDivHighlighting':
       disableDivHighlighting();
       break;
+
+    case 'initiatePageScanner':
+      scanTrackers();
+      break;
   }
 });
 
@@ -35,6 +40,11 @@ chrome.commands.onCommand.addListener(function (command) {
     // Default Ctrl+Shift+2
     case 'tracking':
       enableDivHighlighting('tracking');
+      break;
+
+    // Default Ctrl+Shift+3
+    case 'scan':
+      scanTrackers();
       break;
   }
 });
@@ -111,9 +121,6 @@ const termsAndConditionsGeminiQuery = async (text: string) => {
     if (error instanceof SyntaxError) {
       console.log('AI response in unknown format');
     }
-    if (error instanceof TypeError) {
-      console.log('aaaaaaaa');
-    }
   }
 };
 
@@ -177,6 +184,42 @@ const trackingGeminiQuery = async (text: string) => {
       console.log('AI response in unknown format');
     }
   }
+};
+
+const scanTrackers = async () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
+    if (tab[0] != null) {
+      console.log(tab[0].url);
+
+      const path = chrome.runtime.getURL('/trackerdb.engine');
+
+      fetch(path)
+        .then(response => response.blob())
+        .then(blob => {
+          let reader = new FileReader();
+          reader.onload = async function (e) {
+            var bytes = new Uint8Array(reader.result as ArrayBuffer);
+            let trackerDB = await loadTrackerDB(bytes);
+
+            const urlMatches = await trackerDB.matchUrl(
+              {
+                url: tab[0].url,
+                type: 'xhr',
+                // sourceUrl: 'https://google.com/'
+              },
+              {
+                getDomainMetadata: true,
+              },
+            );
+
+            console.log(urlMatches);
+            // let arrayBuffer = new Uint8Array(reader.result);
+          };
+
+          reader.readAsArrayBuffer(blob);
+        });
+    }
+  });
 };
 
 const enableDivHighlighting = async (func: string) => {

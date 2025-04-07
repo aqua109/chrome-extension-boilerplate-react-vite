@@ -59,7 +59,7 @@ const manifest = {
   ],
   web_accessible_resources: [
     {
-      resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-32.png'],
+      resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-32.png', 'trackerdb.engine'],
       matches: ['*://*/*'],
     },
   ],
@@ -75,6 +75,12 @@ const manifest = {
         default: 'Ctrl+Shift+2',
       },
       description: 'Launches tracking locator function',
+    },
+    scan: {
+      suggested_key: {
+        default: 'Ctrl+Shift+3',
+      },
+      description: 'Initiate scan for website trackers',
     },
   },
 } satisfies chrome.runtime.ManifestV3;

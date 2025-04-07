@@ -7,6 +7,10 @@ const Popup = () => {
     await chrome.runtime.sendMessage({ type: 'enableDivHighlighting', func: func });
   };
 
+  const InitiatePageScanner = async () => {
+    await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
+  };
+
   return (
     <div className="App bg-gray-100">
       <header className="App-header text-gray-500 mb-3">
@@ -14,7 +18,7 @@ const Popup = () => {
           <img src={chrome.runtime.getURL(icon)} className="mb-11.5 h-12" alt="icon" />
           <h1 className="font-sans font-medium text-gray-700 text-2xl mb-2.5"> PrivacyPal </h1>
         </div>
-        <p> Summarise terms and conditions with Gemini AI</p>
+        <p> Summarise Terms and Conditions with Gemini AI</p>
         <button
           className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
           onClick={() => EnablePageHighlighter('summarise')}>
@@ -24,6 +28,11 @@ const Popup = () => {
           className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
           onClick={() => EnablePageHighlighter('tracking')}>
           Locate Tracking Data
+        </button>
+        <button
+          className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
+          onClick={() => InitiatePageScanner()}>
+          Scan for Trackers
         </button>
       </header>
     </div>
