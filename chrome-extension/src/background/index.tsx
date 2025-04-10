@@ -189,8 +189,6 @@ const trackingGeminiQuery = async (text: string) => {
 const scanTrackers = async () => {
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
     if (tab[0] != null) {
-      console.log(tab[0].url);
-
       const path = chrome.runtime.getURL('/trackerdb.engine');
 
       fetch(path)
@@ -201,7 +199,7 @@ const scanTrackers = async () => {
             var bytes = new Uint8Array(reader.result as ArrayBuffer);
             let trackerDB = await loadTrackerDB(bytes);
 
-            const urlMatches = await trackerDB.matchUrl(
+            const urlMatches = trackerDB.matchUrl(
               {
                 url: tab[0].url,
                 type: 'xhr',
@@ -209,11 +207,18 @@ const scanTrackers = async () => {
               },
               {
                 getDomainMetadata: true,
-              },
+              }
             );
 
-            console.log(urlMatches);
-            // let arrayBuffer = new Uint8Array(reader.result);
+            console.log('sending tracking message');
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+              if (tab[0] != null) {
+                chrome.tabs.sendMessage(tab[0].id!, {
+                  type: 'tracking',
+                  data: JSON.stringify(urlMatches)
+                });
+              }
+            });
           };
 
           reader.readAsArrayBuffer(blob);
