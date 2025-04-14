@@ -1,13 +1,25 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import loadTrackerDB from '@ghostery/trackerdb';
 
-chrome.webRequest.onBeforeRequest.addListener(
-  function (details) {
-    console.log(details.url);
-  },
-  { urls: [] },
-  [],
-);
+var pageRequests: { [url: string]: number } = {};
+var recordPageRequests: boolean = true;
+
+// if (recordPageRequests) {
+//   chrome.webRequest.onBeforeRequest.addListener(
+//     function (details) {
+//       if (pageRequests[details.url] !== undefined) {
+//         pageRequests[details.url]++;
+//       }
+
+//       else {
+//         pageRequests[details.url] = 1;
+//       }
+//       console.log(details.url);
+//     },
+//     { urls: [] },
+//     [],
+//   );
+// }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
@@ -194,45 +206,67 @@ const trackingGeminiQuery = async (text: string) => {
   }
 };
 
+const pageRequestsListener = (details: chrome.webRequest.WebRequestBodyDetails) => {
+  if (pageRequests[details.url] !== undefined) {
+    pageRequests[details.url]++;
+  } else {
+    pageRequests[details.url] = 1;
+  }
+  console.log(details.url);
+};
+
 const scanTrackers = async () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
-    if (tab[0] != null) {
-      const path = chrome.runtime.getURL('/trackerdb.engine');
+  if (recordPageRequests) {
+    chrome.webRequest.onBeforeRequest.addListener(pageRequestsListener, { urls: [] }, []);
+  } else {
+    chrome.webRequest.onBeforeRequest.removeListener(pageRequestsListener);
+  }
+  // var sortableArray = Object.entries(pageRequests);
+  // var sortedArray = sortableArray.sort(([, a], [, b]) => a - b);
+  // var sortedObject = Object.fromEntries(sortedArray);
+  // for (let key in sortedObject) {
+  //   console.log(`${key}: ${sortedObject[key]}`);
+  // }
 
-      fetch(path)
-        .then(response => response.blob())
-        .then(blob => {
-          let reader = new FileReader();
-          reader.onload = async function (e) {
-            var bytes = new Uint8Array(reader.result as ArrayBuffer);
-            let trackerDB = await loadTrackerDB(bytes);
+  recordPageRequests = !recordPageRequests;
+  // chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
+  //   if (tab[0] != null) {
+  //     const path = chrome.runtime.getURL('/trackerdb.engine');
 
-            const urlMatches = trackerDB.matchUrl(
-              {
-                url: tab[0].url,
-                type: 'xhr',
-                // sourceUrl: 'https://google.com/'
-              },
-              {
-                getDomainMetadata: true,
-              },
-            );
+  //     fetch(path)
+  //       .then(response => response.blob())
+  //       .then(blob => {
+  //         let reader = new FileReader();
+  //         reader.onload = async function (e) {
+  //           var bytes = new Uint8Array(reader.result as ArrayBuffer);
+  //           let trackerDB = await loadTrackerDB(bytes);
 
-            console.log('sending tracking message');
-            chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-              if (tab[0] != null) {
-                chrome.tabs.sendMessage(tab[0].id!, {
-                  type: 'tracking',
-                  data: JSON.stringify(urlMatches),
-                });
-              }
-            });
-          };
+  //           const urlMatches = trackerDB.matchUrl(
+  //             {
+  //               url: tab[0].url,
+  //               type: 'xhr',
+  //               // sourceUrl: 'https://google.com/'
+  //             },
+  //             {
+  //               getDomainMetadata: true,
+  //             },
+  //           );
 
-          reader.readAsArrayBuffer(blob);
-        });
-    }
-  });
+  //           console.log('sending tracking message');
+  //           chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+  //             if (tab[0] != null) {
+  //               chrome.tabs.sendMessage(tab[0].id!, {
+  //                 type: 'tracking',
+  //                 data: JSON.stringify(urlMatches),
+  //               });
+  //             }
+  //           });
+  //         };
+
+  //         reader.readAsArrayBuffer(blob);
+  //       });
+  //   }
+  // });
 };
 
 const enableDivHighlighting = async (func: string) => {
@@ -250,3 +284,7 @@ const disableDivHighlighting = async () => {
     }
   });
 };
+
+if (recordPageRequests) {
+  scanTrackers();
+}

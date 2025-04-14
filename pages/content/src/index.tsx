@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import Modal from './modal';
 import injectedStyle from '@src/modal.css?inline';
-import { TrackingResponse } from './ghosteryTrackingResponse';
+import { TrackingResponse } from './ghostery-tracking-response';
 
 const enableClickToAISummary = async (func: string) => {
   switch (func) {
@@ -125,12 +125,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'tracking':
-
       let responses: Array<TrackingResponse> = JSON.parse(message.data);
 
-      responses.forEach((element) => {
+      responses.forEach(element => {
         console.log(element.category.key);
-      })
+      });
       break;
   }
 });
