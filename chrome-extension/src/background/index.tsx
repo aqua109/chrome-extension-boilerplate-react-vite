@@ -1,6 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import loadTrackerDB from '@ghostery/trackerdb';
 
+chrome.webRequest.onBeforeRequest.addListener(
+  function (details) {
+    console.log(details.url);
+  },
+  { urls: [] },
+  [],
+);
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'queryGemini':
@@ -207,7 +215,7 @@ const scanTrackers = async () => {
               },
               {
                 getDomainMetadata: true,
-              }
+              },
             );
 
             console.log('sending tracking message');
@@ -215,7 +223,7 @@ const scanTrackers = async () => {
               if (tab[0] != null) {
                 chrome.tabs.sendMessage(tab[0].id!, {
                   type: 'tracking',
-                  data: JSON.stringify(urlMatches)
+                  data: JSON.stringify(urlMatches),
                 });
               }
             });
