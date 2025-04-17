@@ -1,6 +1,6 @@
-export type Root = TrackingResponse[];
+export type TrackingReponse = GhosteryMatch[][];
 
-export interface TrackingResponse {
+export interface GhosteryMatch {
   pattern: Pattern;
   category: Category;
   organization: Organization;

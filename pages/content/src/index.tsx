@@ -1,7 +1,16 @@
 import { createRoot } from 'react-dom/client';
 import Modal from './modal';
 import injectedStyle from '@src/modal.css?inline';
-import { TrackingResponse } from './ghostery-tracking-response';
+import { GhosteryMatch, TrackingReponse } from './ghostery-tracking-response';
+import { run } from 'node:test';
+
+console.log('injected content-script');
+
+const runOnStart = async () => {
+  await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
+};
+
+runOnStart();
 
 const enableClickToAISummary = async (func: string) => {
   switch (func) {
@@ -124,13 +133,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
 
-    case 'tracking':
-      let responses: Array<TrackingResponse> = JSON.parse(message.data);
-
+    case 'scanRequestsReturned':
+      var modalTitle = document.getElementById('ai-modal-title');
+      var loader = document.getElementById('summary-loader');
+      loader?.remove();
+      modalTitle!.textContent = 'Site Requests Analytics';
+      let responses: TrackingReponse = JSON.parse(message.data);
+      let categories: { [category: string]: Array<GhosteryMatch> } = {};
+      console.log(responses);
       responses.forEach(element => {
-        console.log(element.category.key);
+        if (element.length > 0) {
+          element.forEach(match => {
+            if (categories[match.category.key] === undefined) {
+              categories[match.category.key] = [];
+            }
+            categories[match.category.key].push(match);
+          });
+        }
       });
+
+      for (let key in categories) {
+        formatSectionTextAndContent(toTitleCase(key), categories[key].length.toString());
+      }
       break;
+
+    case 'displayScanResults':
+      showModal();
   }
 });
 

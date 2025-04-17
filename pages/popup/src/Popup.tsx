@@ -7,8 +7,8 @@ const Popup = () => {
     await chrome.runtime.sendMessage({ type: 'enableDivHighlighting', func: func });
   };
 
-  const InitiatePageScanner = async () => {
-    await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
+  const ShowPageScannerResults = async () => {
+    await chrome.runtime.sendMessage({ type: 'displayPageScanResults' });
   };
 
   return (
@@ -31,7 +31,7 @@ const Popup = () => {
         </button>
         <button
           className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
-          onClick={() => InitiatePageScanner()}>
+          onClick={() => ShowPageScannerResults()}>
           Scan for Trackers
         </button>
       </header>

@@ -1,25 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import loadTrackerDB from '@ghostery/trackerdb';
 
-var pageRequests: { [url: string]: number } = {};
-var recordPageRequests: boolean = true;
-
-// if (recordPageRequests) {
-//   chrome.webRequest.onBeforeRequest.addListener(
-//     function (details) {
-//       if (pageRequests[details.url] !== undefined) {
-//         pageRequests[details.url]++;
-//       }
-
-//       else {
-//         pageRequests[details.url] = 1;
-//       }
-//       console.log(details.url);
-//     },
-//     { urls: [] },
-//     [],
-//   );
-// }
+// var pageRequests: { [url: string]: number } = {};
+var waitForPageRequests: boolean = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
@@ -44,7 +27,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
 
     case 'initiatePageScanner':
-      scanTrackers();
+      initialisePageRequestLogging();
+      break;
+
+    case 'displayPageScanResults':
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+        if (tab[0] != null) {
+          chrome.tabs.sendMessage(tab[0].id!, {
+            type: 'displayScanResults',
+          });
+        }
+      });
       break;
   }
 });
@@ -64,7 +57,7 @@ chrome.commands.onCommand.addListener(function (command) {
 
     // Default Ctrl+Shift+3
     case 'scan':
-      scanTrackers();
+      // initialisePageRequestLogging();
       break;
   }
 });
@@ -206,67 +199,56 @@ const trackingGeminiQuery = async (text: string) => {
   }
 };
 
-const pageRequestsListener = (details: chrome.webRequest.WebRequestBodyDetails) => {
+const pageRequestsListener = (
+  details: chrome.webRequest.WebRequestBodyDetails,
+  pageRequests: { [url: string]: number },
+) => {
   if (pageRequests[details.url] !== undefined) {
     pageRequests[details.url]++;
   } else {
     pageRequests[details.url] = 1;
   }
-  console.log(details.url);
 };
 
-const scanTrackers = async () => {
-  if (recordPageRequests) {
-    chrome.webRequest.onBeforeRequest.addListener(pageRequestsListener, { urls: [] }, []);
-  } else {
-    chrome.webRequest.onBeforeRequest.removeListener(pageRequestsListener);
-  }
-  // var sortableArray = Object.entries(pageRequests);
-  // var sortedArray = sortableArray.sort(([, a], [, b]) => a - b);
-  // var sortedObject = Object.fromEntries(sortedArray);
-  // for (let key in sortedObject) {
-  //   console.log(`${key}: ${sortedObject[key]}`);
-  // }
+const scanTrackers = async (pageRequests: { [url: string]: number }) => {
+  let matches: object[] = [];
 
-  recordPageRequests = !recordPageRequests;
-  // chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
-  //   if (tab[0] != null) {
-  //     const path = chrome.runtime.getURL('/trackerdb.engine');
+  const path = chrome.runtime.getURL('/trackerdb.engine');
+  fetch(path)
+    .then(response => response.blob())
+    .then(blob => {
+      let reader = new FileReader();
+      reader.onload = async function (e) {
+        var bytes = new Uint8Array(reader.result as ArrayBuffer);
+        let trackerDB = await loadTrackerDB(bytes);
 
-  //     fetch(path)
-  //       .then(response => response.blob())
-  //       .then(blob => {
-  //         let reader = new FileReader();
-  //         reader.onload = async function (e) {
-  //           var bytes = new Uint8Array(reader.result as ArrayBuffer);
-  //           let trackerDB = await loadTrackerDB(bytes);
+        for (let key in pageRequests) {
+          const urlMatches = trackerDB.matchUrl(
+            {
+              url: key,
+              type: 'xhr',
+            },
+            {
+              getDomainMetadata: true,
+            },
+          );
 
-  //           const urlMatches = trackerDB.matchUrl(
-  //             {
-  //               url: tab[0].url,
-  //               type: 'xhr',
-  //               // sourceUrl: 'https://google.com/'
-  //             },
-  //             {
-  //               getDomainMetadata: true,
-  //             },
-  //           );
+          if (Object.keys(urlMatches).length > 0) {
+            matches.push(urlMatches);
+          }
+        }
 
-  //           console.log('sending tracking message');
-  //           chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-  //             if (tab[0] != null) {
-  //               chrome.tabs.sendMessage(tab[0].id!, {
-  //                 type: 'tracking',
-  //                 data: JSON.stringify(urlMatches),
-  //               });
-  //             }
-  //           });
-  //         };
-
-  //         reader.readAsArrayBuffer(blob);
-  //       });
-  //   }
-  // });
+        chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+          if (tab[0] != null) {
+            chrome.tabs.sendMessage(tab[0].id!, {
+              type: 'scanRequestsReturned',
+              data: JSON.stringify(matches),
+            });
+          }
+        });
+      };
+      reader.readAsArrayBuffer(blob);
+    });
 };
 
 const enableDivHighlighting = async (func: string) => {
@@ -285,6 +267,22 @@ const disableDivHighlighting = async () => {
   });
 };
 
-if (recordPageRequests) {
-  scanTrackers();
-}
+const sleep = async (ms: number) => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+// Log all web requests for 10sec on page load
+const initialisePageRequestLogging = async () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
+    if (tab[0] != null) {
+      var pageRequests: { [url: string]: number } = {};
+      var listener = (e: chrome.webRequest.WebRequestBodyDetails) => pageRequestsListener(e, pageRequests);
+      chrome.webRequest.onBeforeRequest.addListener(listener, { urls: [] }, []);
+      waitForPageRequests = true;
+      await sleep(10000);
+      chrome.webRequest.onBeforeRequest.removeListener(listener);
+      waitForPageRequests = false;
+      scanTrackers(pageRequests);
+    }
+  });
+};
