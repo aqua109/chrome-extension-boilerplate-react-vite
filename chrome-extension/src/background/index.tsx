@@ -1,9 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import loadTrackerDB from '@ghostery/trackerdb';
 
-// var pageRequests: { [url: string]: number } = {};
-var waitForPageRequests: boolean = false;
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'queryGemini':
@@ -35,6 +32,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (tab[0] != null) {
           chrome.tabs.sendMessage(tab[0].id!, {
             type: 'displayScanResults',
+          });
+        }
+      });
+      break;
+
+    case 'testingPieChart':
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+        if (tab[0] != null) {
+          chrome.tabs.sendMessage(tab[0].id!, {
+            type: 'testingPieChart',
           });
         }
       });
@@ -199,58 +206,6 @@ const trackingGeminiQuery = async (text: string) => {
   }
 };
 
-const pageRequestsListener = (
-  details: chrome.webRequest.WebRequestBodyDetails,
-  pageRequests: { [url: string]: number },
-) => {
-  if (pageRequests[details.url] !== undefined) {
-    pageRequests[details.url]++;
-  } else {
-    pageRequests[details.url] = 1;
-  }
-};
-
-const scanTrackers = async (pageRequests: { [url: string]: number }) => {
-  let matches: object[] = [];
-
-  const path = chrome.runtime.getURL('/trackerdb.engine');
-  fetch(path)
-    .then(response => response.blob())
-    .then(blob => {
-      let reader = new FileReader();
-      reader.onload = async function (e) {
-        var bytes = new Uint8Array(reader.result as ArrayBuffer);
-        let trackerDB = await loadTrackerDB(bytes);
-
-        for (let key in pageRequests) {
-          const urlMatches = trackerDB.matchUrl(
-            {
-              url: key,
-              type: 'xhr',
-            },
-            {
-              getDomainMetadata: true,
-            },
-          );
-
-          if (Object.keys(urlMatches).length > 0) {
-            matches.push(urlMatches);
-          }
-        }
-
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-          if (tab[0] != null) {
-            chrome.tabs.sendMessage(tab[0].id!, {
-              type: 'scanRequestsReturned',
-              data: JSON.stringify(matches),
-            });
-          }
-        });
-      };
-      reader.readAsArrayBuffer(blob);
-    });
-};
-
 const enableDivHighlighting = async (func: string) => {
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
     if (tab[0] != null) {
@@ -267,22 +222,79 @@ const disableDivHighlighting = async () => {
   });
 };
 
+const pageRequestsListener = (
+  details: chrome.webRequest.WebRequestBodyDetails,
+  pageRequests: { [url: string]: number },
+) => {
+  if (pageRequests[details.url] !== undefined) {
+    pageRequests[details.url]++;
+  } else {
+    pageRequests[details.url] = 1;
+  }
+};
+
 const sleep = async (ms: number) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
 // Log all web requests for 10sec on page load
 const initialisePageRequestLogging = async () => {
+  console.log('initialisePageRequestLogging');
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
     if (tab[0] != null) {
-      var pageRequests: { [url: string]: number } = {};
-      var listener = (e: chrome.webRequest.WebRequestBodyDetails) => pageRequestsListener(e, pageRequests);
+      let pageRequests: { [url: string]: number } = {};
+      let listener = (e: chrome.webRequest.WebRequestBodyDetails) => pageRequestsListener(e, pageRequests);
       chrome.webRequest.onBeforeRequest.addListener(listener, { urls: [] }, []);
-      waitForPageRequests = true;
       await sleep(10000);
       chrome.webRequest.onBeforeRequest.removeListener(listener);
-      waitForPageRequests = false;
-      scanTrackers(pageRequests);
+
+      if (Object.keys(pageRequests).length > 0) {
+        crossReferenceTrackersWithDB(pageRequests);
+      } else {
+        // Failed to find any trackers
+      }
     }
   });
+};
+
+const crossReferenceTrackersWithDB = async (pageRequests: { [url: string]: number }) => {
+  let matches: object[] = [];
+  const path = chrome.runtime.getURL('/trackerdb.engine');
+
+  fetch(path)
+    .then(response => response.blob())
+    .then(blob => {
+      let reader = new FileReader();
+      reader.onload = async function (e) {
+        let bytes = new Uint8Array(reader.result as ArrayBuffer);
+        let trackerDB = await loadTrackerDB(bytes);
+
+        for (let key in pageRequests) {
+          const urlMatches = trackerDB.matchUrl(
+            {
+              url: key,
+              type: 'xhr',
+            },
+            {
+              getDomainMetadata: true,
+            },
+          );
+
+          // Add method to catch unknown matches
+          if (Object.keys(urlMatches).length > 0) {
+            matches.push(urlMatches);
+          }
+        }
+
+        chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+          if (tab[0] != null) {
+            chrome.tabs.sendMessage(tab[0].id!, {
+              type: 'ghosteryData',
+              data: JSON.stringify(matches),
+            });
+          }
+        });
+      };
+      reader.readAsArrayBuffer(blob);
+    });
 };

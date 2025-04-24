@@ -2,9 +2,9 @@ import { createRoot } from 'react-dom/client';
 import Modal from './modal';
 import injectedStyle from '@src/modal.css?inline';
 import { GhosteryMatch, TrackingReponse } from './ghostery-tracking-response';
-import { run } from 'node:test';
+import { mangoFusionPalette, PieChart } from '@mui/x-charts';
 
-console.log('injected content-script');
+let ghosteryData: TrackingReponse;
 
 const runOnStart = async () => {
   await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
@@ -133,6 +133,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
 
+    case 'ghosteryData':
+      console.log('ghosteryDataReceived');
+      ghosteryData = JSON.parse(message.data);
+      console.log(ghosteryData);
+      break;
+
     case 'scanRequestsReturned':
       var modalTitle = document.getElementById('ai-modal-title');
       var loader = document.getElementById('summary-loader');
@@ -158,9 +164,96 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'displayScanResults':
-      showModal();
+      waitForGhosteryData();
+      break;
+
+    case 'testingPieChart':
+      testingPieChart();
+      break;
   }
 });
+
+const sleep = async (ms: number) => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+const waitForGhosteryData = async () => {
+  showModal();
+  let count = 0;
+  while (ghosteryData === undefined && count < 11) {
+    console.log(`count: ${count}\tdata: ${ghosteryData}`);
+    await sleep(1000);
+    count++;
+  }
+
+  if (ghosteryData !== undefined) {
+    var modalContent = document.getElementById('ai-modal-content');
+    var loader = document.getElementById('summary-loader');
+    loader?.remove();
+    var pieChart = document.createElement('div');
+    modalContent!.appendChild(pieChart);
+    createRoot(pieChart).render(
+      <PieChart
+        colors={mangoFusionPalette}
+        series={[
+          {
+            data: [
+              { id: 0, value: 1, label: 'series A' },
+              { id: 1, value: 2, label: 'series B' },
+              { id: 2, value: 3, label: 'series C' },
+              { id: 3, value: 4, label: 'series C' },
+              { id: 4, value: 5, label: 'series C' },
+              { id: 5, value: 6, label: 'series C' },
+              { id: 6, value: 7, label: 'series C' },
+              { id: 7, value: 8, label: 'series C' },
+              { id: 8, value: 9, label: 'series C' },
+              { id: 9, value: 10, label: 'series C' },
+            ],
+
+            highlightScope: { fade: 'global', highlight: 'item' },
+          },
+        ]}
+        width={200}
+        height={200}
+      />,
+    );
+  } else {
+    //Error
+  }
+};
+
+const testingPieChart = () => {
+  var modalContent = document.getElementById('ai-modal-content');
+  var loader = document.getElementById('summary-loader');
+  loader?.remove();
+  var pieChart = document.createElement('div');
+  modalContent!.appendChild(pieChart);
+  createRoot(pieChart).render(
+    <PieChart
+      colors={mangoFusionPalette}
+      series={[
+        {
+          data: [
+            { id: 0, value: 1, label: 'series A' },
+            { id: 1, value: 2, label: 'series B' },
+            { id: 2, value: 3, label: 'series C' },
+            { id: 3, value: 4, label: 'series C' },
+            { id: 4, value: 5, label: 'series C' },
+            { id: 5, value: 6, label: 'series C' },
+            { id: 6, value: 7, label: 'series C' },
+            { id: 7, value: 8, label: 'series C' },
+            { id: 8, value: 9, label: 'series C' },
+            { id: 9, value: 10, label: 'series C' },
+          ],
+
+          highlightScope: { fade: 'global', highlight: 'item' },
+        },
+      ]}
+      width={200}
+      height={200}
+    />,
+  );
+};
 
 const formatSectionTextAndContent = (title: string, text: string) => {
   var sectionTitle = document.createElement('div');
@@ -176,16 +269,19 @@ const formatSectionTextAndContent = (title: string, text: string) => {
 };
 
 const showModal = () => {
-  const root = document.createElement('div');
-  root.setAttribute('id', 'ai-summary-modal');
-  document.body.appendChild(root);
+  // Only show if modal doesn't already exist
+  if (document.getElementById('ai-summary-modal') === null) {
+    const root = document.createElement('div');
+    root.setAttribute('id', 'ai-summary-modal');
+    document.body.appendChild(root);
 
-  const styleElement = document.createElement('style');
-  styleElement.setAttribute('id', 'ai-summary-style');
-  styleElement.textContent = injectedStyle;
-  document.body.appendChild(styleElement);
+    const styleElement = document.createElement('style');
+    styleElement.setAttribute('id', 'ai-summary-style');
+    styleElement.textContent = injectedStyle;
+    document.body.appendChild(styleElement);
 
-  createRoot(root).render(<Modal text={''} />);
+    createRoot(root).render(<Modal text={''} />);
+  }
 };
 
 // https://medium.com/@sankarums/convert-a-string-to-title-case-in-typescript-742bfd869cb9

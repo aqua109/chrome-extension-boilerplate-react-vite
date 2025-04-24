@@ -11,7 +11,7 @@
     right: 0;
     bottom: 0;
     position: fixed;
-    z-index: 10000;
+    z-index: 11000;
 }
 
 .pp-overlay {
@@ -30,7 +30,7 @@
     width: 700px;
     max-height: 600px;
     overflow-y: auto;
-    z-index: 10001;
+    z-index: 11001;
     font-family: Verdana, sans-serif;
     box-sizing: content-box;
 }
@@ -62,4 +62,9 @@
     color: #5F6774;
     margin-bottom: 10px;
     text-align: justify;
+}
+
+/* piechart hover tooltip */
+.css-14hprqr-MuiPopper-root-MuiChartsTooltip-root {
+    z-index: 11002;
 }
