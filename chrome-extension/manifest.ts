@@ -48,15 +48,14 @@ const manifest = {
       matches: ['http://*/*', 'https://*/*', '<all_urls>'],
       js: ['content/index.iife.js'],
     },
-    // {
-    //   matches: ['http://*/*', 'https://*/*', '<all_urls>'],
-    //   js: ['content-ui/index.iife.js'],
-    // },
     {
       matches: ['http://*/*', 'https://*/*', '<all_urls>'],
       css: ['content.css'],
     },
   ],
+  content_security_policy: {
+    sandbox: "sandbox allow-scripts; script-src 'unsafe-inline' 'self' https://www.gstatic.com",
+  },
   web_accessible_resources: [
     {
       resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-32.png', 'trackerdb.engine'],

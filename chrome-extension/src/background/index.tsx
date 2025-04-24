@@ -4,7 +4,7 @@ import loadTrackerDB from '@ghostery/trackerdb';
 // var pageRequests: { [url: string]: number } = {};
 var waitForPageRequests: boolean = false;
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   switch (request.type) {
     case 'queryGemini':
       switch (request.func) {
@@ -27,7 +27,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
 
     case 'initiatePageScanner':
-      initialisePageRequestLogging();
+      scanTrackers();
+      // initialisePageRequestLogging();
       break;
 
     case 'displayPageScanResults':
@@ -38,6 +39,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           });
         }
       });
+      await sleep(100);
+      scanTrackers();
       break;
   }
 });
@@ -57,6 +60,7 @@ chrome.commands.onCommand.addListener(function (command) {
 
     // Default Ctrl+Shift+3
     case 'scan':
+      scanTrackers();
       // initialisePageRequestLogging();
       break;
   }
@@ -210,45 +214,52 @@ const pageRequestsListener = (
   }
 };
 
-const scanTrackers = async (pageRequests: { [url: string]: number }) => {
+const scanTrackers = async (/*pageRequests: { [url: string]: number }*/) => {
   let matches: object[] = [];
 
-  const path = chrome.runtime.getURL('/trackerdb.engine');
-  fetch(path)
-    .then(response => response.blob())
-    .then(blob => {
-      let reader = new FileReader();
-      reader.onload = async function (e) {
-        var bytes = new Uint8Array(reader.result as ArrayBuffer);
-        let trackerDB = await loadTrackerDB(bytes);
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+    if (tab[0] != null) {
+      chrome.tabs.sendMessage(tab[0].id!, {
+        type: 'scanRequestsReturned',
+      });
+    }
+  });
+  // const path = chrome.runtime.getURL('/trackerdb.engine');
+  // fetch(path)
+  //   .then(response => response.blob())
+  //   .then(blob => {
+  //     let reader = new FileReader();
+  //     reader.onload = async function (e) {
+  //       var bytes = new Uint8Array(reader.result as ArrayBuffer);
+  //       let trackerDB = await loadTrackerDB(bytes);
 
-        for (let key in pageRequests) {
-          const urlMatches = trackerDB.matchUrl(
-            {
-              url: key,
-              type: 'xhr',
-            },
-            {
-              getDomainMetadata: true,
-            },
-          );
+  //       for (let key in pageRequests) {
+  //         const urlMatches = trackerDB.matchUrl(
+  //           {
+  //             url: key,
+  //             type: 'xhr',
+  //           },
+  //           {
+  //             getDomainMetadata: true,
+  //           },
+  //         );
 
-          if (Object.keys(urlMatches).length > 0) {
-            matches.push(urlMatches);
-          }
-        }
+  //         if (Object.keys(urlMatches).length > 0) {
+  //           matches.push(urlMatches);
+  //         }
+  //       }
 
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-          if (tab[0] != null) {
-            chrome.tabs.sendMessage(tab[0].id!, {
-              type: 'scanRequestsReturned',
-              data: JSON.stringify(matches),
-            });
-          }
-        });
-      };
-      reader.readAsArrayBuffer(blob);
-    });
+  //       chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+  //         if (tab[0] != null) {
+  //           chrome.tabs.sendMessage(tab[0].id!, {
+  //             type: 'scanRequestsReturned',
+  //             data: JSON.stringify(matches),
+  //           });
+  //         }
+  //       });
+  //     };
+  //     reader.readAsArrayBuffer(blob);
+  //   });
 };
 
 const enableDivHighlighting = async (func: string) => {
@@ -279,10 +290,10 @@ const initialisePageRequestLogging = async () => {
       var listener = (e: chrome.webRequest.WebRequestBodyDetails) => pageRequestsListener(e, pageRequests);
       chrome.webRequest.onBeforeRequest.addListener(listener, { urls: [] }, []);
       waitForPageRequests = true;
-      await sleep(10000);
+      await sleep(1000);
       chrome.webRequest.onBeforeRequest.removeListener(listener);
       waitForPageRequests = false;
-      scanTrackers(pageRequests);
+      // scanTrackers(pageRequests);
     }
   });
 };

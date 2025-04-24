@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import Modal from './modal';
+import PieGraph from './piegraph';
 import injectedStyle from '@src/modal.css?inline';
 import { GhosteryMatch, TrackingReponse } from './ghostery-tracking-response';
 import { run } from 'node:test';
@@ -10,7 +11,7 @@ const runOnStart = async () => {
   await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
 };
 
-runOnStart();
+// runOnStart();
 
 const enableClickToAISummary = async (func: string) => {
   switch (func) {
@@ -138,23 +139,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       var loader = document.getElementById('summary-loader');
       loader?.remove();
       modalTitle!.textContent = 'Site Requests Analytics';
-      let responses: TrackingReponse = JSON.parse(message.data);
-      let categories: { [category: string]: Array<GhosteryMatch> } = {};
-      console.log(responses);
-      responses.forEach(element => {
-        if (element.length > 0) {
-          element.forEach(match => {
-            if (categories[match.category.key] === undefined) {
-              categories[match.category.key] = [];
-            }
-            categories[match.category.key].push(match);
-          });
-        }
-      });
+      // let responses: TrackingReponse = JSON.parse(message.data);
+      // let categories: { [category: string]: Array<GhosteryMatch> } = {};
+      // console.log(responses);
+      // responses.forEach(element => {
+      //   if (element.length > 0) {
+      //     element.forEach(match => {
+      //       if (categories[match.category.key] === undefined) {
+      //         categories[match.category.key] = [];
+      //       }
+      //       categories[match.category.key].push(match);
+      //     });
+      //   }
+      // });
 
-      for (let key in categories) {
-        formatSectionTextAndContent(toTitleCase(key), categories[key].length.toString());
-      }
+      // for (let key in categories) {
+      //   formatSectionTextAndContent(toTitleCase(key), categories[key].length.toString());
+      // }
+      var src = document.createElement('script');
+      src.setAttribute('src', 'https://www.gstatic.com/charts/loader.js');
+      var modalContent = document.getElementById('ai-modal-content');
+      var pieGraph = document.createElement('div');
+      modalContent!.appendChild(src);
+      modalContent!.appendChild(pieGraph);
+      createRoot(pieGraph).render(<PieGraph />);
+
       break;
 
     case 'displayScanResults':
