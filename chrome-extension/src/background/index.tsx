@@ -36,16 +36,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       });
       break;
-
-    case 'testingPieChart':
-      chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
-        if (tab[0] != null) {
-          chrome.tabs.sendMessage(tab[0].id!, {
-            type: 'testingPieChart',
-          });
-        }
-      });
-      break;
   }
 });
 

@@ -1,0 +1,16 @@
+.match-pattern-name, .match-org-name {
+    font-size: 18px;
+    color: #374151;
+}
+
+.match-category-name, .match-category-desc, .match-org-desc, .match-org-country {
+    font-size: 14px;
+    color: #5F6774;
+    margin-bottom: 10px;
+    text-align: justify;
+}
+
+.match-category-desc, .match-org-desc {
+    font-style: italic;
+}
+

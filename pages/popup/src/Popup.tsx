@@ -11,10 +11,6 @@ const Popup = () => {
     await chrome.runtime.sendMessage({ type: 'displayPageScanResults' });
   };
 
-  const TestingPieChart = async () => {
-    await chrome.runtime.sendMessage({ type: 'testingPieChart' });
-  };
-
   return (
     <div className="App bg-gray-100">
       <header className="App-header text-gray-500 mb-3">
@@ -37,11 +33,6 @@ const Popup = () => {
           className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
           onClick={() => ShowPageScannerResults()}>
           Scan for Trackers
-        </button>
-        <button
-          className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
-          onClick={() => TestingPieChart()}>
-          TestingPieChart
         </button>
       </header>
     </div>
