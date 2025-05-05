@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client';
 import Modal from './modal';
-import LoadingStyle from './modal';
 import injectedStyle from '@src/modal.css?inline';
 import listStyle from '@src/ghostery-list-item.css?inline';
 import Stack from '@mui/material/Stack';
@@ -8,7 +7,6 @@ import Box from '@mui/material/Box';
 import { GhosteryMatch, TrackingReponse } from './ghostery-tracking-response';
 import { mangoFusionPalette, PieChart, PieItemIdentifier, PieValueType } from '@mui/x-charts';
 import GhosteryListItem from './ghostery-list-item';
-import { JSX } from 'react';
 
 let ghosteryData: TrackingReponse;
 let pageScanTimeRemaining: number = 10;
@@ -16,7 +14,8 @@ let previousPieChartIndex: number = -1;
 
 const runOnStart = async () => {
   await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
-  while (pageScanTimeRemaining > 0) {
+  while (pageScanTimeRemaining <= 100) {
+    console.log(pageScanTimeRemaining);
     await sleep(1000);
     pageScanTimeRemaining += 10;
   }
@@ -146,7 +145,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'ghosteryData':
+      console.log('GhosteryDataReceived');
       ghosteryData = JSON.parse(message.data);
+      console.log(ghosteryData);
       break;
 
     // case 'scanRequestsReturned':
@@ -200,11 +201,11 @@ const PiechartDrilldownList = (props: { category: string }) => {
     }
   });
 
+  let sortedMatches = Object.fromEntries(Object.entries(combinedMatches).sort((a, b) => b[1].length - a[1].length));
+
   let stack = [];
-  for (let key in combinedMatches) {
-    stack.push(
-      <GhosteryListItem match={combinedMatches[key][0]} count={combinedMatches[key].length}></GhosteryListItem>,
-    );
+  for (let key in sortedMatches) {
+    stack.push(<GhosteryListItem match={sortedMatches[key][0]} count={sortedMatches[key].length}></GhosteryListItem>);
   }
 
   return (
@@ -220,7 +221,7 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
   let previousStack = document.getElementById('piechart-drilldown-stack');
 
   if (previousStack != null) {
-    previousStack?.remove();
+    previousStack.remove();
   }
 
   if (slice.dataIndex != previousPieChartIndex) {
@@ -245,6 +246,19 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
   }
 };
 
+// https://medium.com/@ryan_forrester_/javascript-wait-for-element-to-exist-simple-explanation-1cd8c569e354
+const waitForElement = (selector: string) => {
+  return new Promise(resolve => {
+    const interval = setInterval(() => {
+      const element = document.getElementById(selector);
+      if (element) {
+        clearInterval(interval);
+        resolve(element);
+      }
+    }, 100);
+  });
+};
+
 const waitForGhosteryData = async () => {
   showModal('Determinate', pageScanTimeRemaining);
   let count = 0;
@@ -255,52 +269,64 @@ const waitForGhosteryData = async () => {
   }
 
   if (ghosteryData !== undefined) {
-    var modalContent = document.getElementById('ai-modal-content');
-    var loader = document.getElementById('summary-loader');
-    loader?.remove();
-    var pieChart = document.createElement('div');
-    modalContent!.appendChild(pieChart);
+    waitForElement('ai-modal-content').then(modalContent => {
+      let loader = document.getElementById('summary-loader');
+      loader?.remove();
 
-    let data: Array<PieValueType> = new Array();
+      let previousChart = document.getElementById('tracking-summary-chart');
 
-    let categories: { [category: string]: Array<GhosteryMatch> } = {};
-    console.log(ghosteryData);
-    ghosteryData.forEach(element => {
-      if (element.length > 0) {
-        element.forEach(match => {
-          if (categories[match.category.key] === undefined) {
-            categories[match.category.key] = [];
-          }
-          categories[match.category.key].push(match);
-        });
+      if (previousChart != null) {
+        previousChart.remove();
       }
+
+      let modalTitle = document.getElementById('ai-modal-title');
+      modalTitle!.textContent = 'Webpage Trackers Summary';
+
+      let pieChart = document.createElement('div');
+      pieChart.setAttribute('id', 'tracking-summary-chart');
+      (modalContent as HTMLElement).appendChild(pieChart);
+
+      let data: Array<PieValueType> = new Array();
+      let categories: { [category: string]: Array<GhosteryMatch> } = {};
+
+      ghosteryData.forEach(element => {
+        if (element.length > 0) {
+          element.forEach(match => {
+            if (categories[match.category.key] === undefined) {
+              categories[match.category.key] = [];
+            }
+            categories[match.category.key].push(match);
+          });
+        }
+      });
+
+      let sortedCategories = Object.fromEntries(Object.entries(categories).sort((a, b) => b[1].length - a[1].length));
+
+      for (let key in sortedCategories) {
+        let datagram: PieValueType = {
+          id: key,
+          value: sortedCategories[key].length,
+          label: `${toTitleCase(key)}`,
+        };
+
+        data.push(datagram);
+      }
+
+      createRoot(pieChart).render(
+        <PieChart
+          colors={mangoFusionPalette}
+          series={[
+            {
+              data: data,
+              highlightScope: { fade: 'global', highlight: 'item' },
+            },
+          ]}
+          width={200}
+          height={200}
+          onItemClick={(_event, slice) => logPieChart(slice, data)}
+        />,
+      );
     });
-
-    for (let key in categories) {
-      let datagram: PieValueType = {
-        id: key,
-        value: categories[key].length,
-        label: `${toTitleCase(key)} (${categories[key].length})`,
-      };
-
-      data.push(datagram);
-    }
-
-    createRoot(pieChart).render(
-      <PieChart
-        colors={mangoFusionPalette}
-        series={[
-          {
-            data: data,
-
-            highlightScope: { fade: 'global', highlight: 'item' },
-          },
-        ]}
-        width={200}
-        height={200}
-        onItemClick={(event, slice) => logPieChart(slice, data)}
-      />,
-    );
   } else {
     //Error
   }
@@ -348,6 +374,7 @@ const toTitleCase = (title: string) => {
     })
     .join(' ');
 };
+
 function ghosteryListItem(): import('react').ReactNode {
   throw new Error('Function not implemented.');
 }

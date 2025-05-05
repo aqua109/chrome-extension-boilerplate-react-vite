@@ -229,7 +229,6 @@ const sleep = async (ms: number) => {
 
 // Log all web requests for 10sec on page load
 const initialisePageRequestLogging = async () => {
-  console.log('initialisePageRequestLogging');
   chrome.tabs.query({ active: true, currentWindow: true }, async function (tab) {
     if (tab[0] != null) {
       let pageRequests: { [url: string]: number } = {};
