@@ -54,7 +54,13 @@ chrome.commands.onCommand.addListener(function (command) {
 
     // Default Ctrl+Shift+3
     case 'scan':
-      // initialisePageRequestLogging();
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+        if (tab[0] != null) {
+          chrome.tabs.sendMessage(tab[0].id!, {
+            type: 'displayScanResults',
+          });
+        }
+      });
       break;
   }
 });
@@ -234,7 +240,7 @@ const initialisePageRequestLogging = async () => {
       let pageRequests: { [url: string]: number } = {};
       let listener = (e: chrome.webRequest.WebRequestBodyDetails) => pageRequestsListener(e, pageRequests);
       chrome.webRequest.onBeforeRequest.addListener(listener, { urls: [] }, []);
-      await sleep(10000);
+      await sleep(3000);
       chrome.webRequest.onBeforeRequest.removeListener(listener);
 
       if (Object.keys(pageRequests).length > 0) {

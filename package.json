@@ -41,6 +41,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@fontsource/roboto": "^5.2.5",
     "@ghostery/trackerdb": "^1.0.502",
     "@mui/material": "^7.0.2",
     "@mui/x-charts": "8.0.0-beta.3",

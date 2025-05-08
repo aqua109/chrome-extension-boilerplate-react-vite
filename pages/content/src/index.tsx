@@ -7,6 +7,7 @@ import Box from '@mui/material/Box';
 import { GhosteryMatch, TrackingReponse } from './ghostery-tracking-response';
 import { mangoFusionPalette, PieChart, PieItemIdentifier, PieValueType } from '@mui/x-charts';
 import GhosteryListItem from './ghostery-list-item';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 let ghosteryData: TrackingReponse;
 let pageScanTimeRemaining: number = 10;
@@ -145,34 +146,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'ghosteryData':
-      console.log('GhosteryDataReceived');
       ghosteryData = JSON.parse(message.data);
-      console.log(ghosteryData);
       break;
-
-    // case 'scanRequestsReturned':
-    //   var modalTitle = document.getElementById('ai-modal-title');
-    //   var loader = document.getElementById('summary-loader');
-    //   loader?.remove();
-    //   modalTitle!.textContent = 'Site Requests Analytics';
-    //   let responses: TrackingReponse = JSON.parse(message.data);
-    //   let categories: { [category: string]: Array<GhosteryMatch> } = {};
-    //   console.log(responses);
-    //   responses.forEach(element => {
-    //     if (element.length > 0) {
-    //       element.forEach(match => {
-    //         if (categories[match.category.key] === undefined) {
-    //           categories[match.category.key] = [];
-    //         }
-    //         categories[match.category.key].push(match);
-    //       });
-    //     }
-    //   });
-
-    //   for (let key in categories) {
-    //     formatSectionTextAndContent(toTitleCase(key), categories[key].length.toString());
-    //   }
-    //   break;
 
     case 'displayScanResults':
       waitForGhosteryData();
@@ -188,15 +163,15 @@ const PiechartDrilldownList = (props: { category: string }) => {
   // Filter Ghostery Data on category
   let matched = ghosteryData.filter(match => match[0].category.key == props.category);
   // Combine matches that have the same ghostery id
-  let combinedMatches: { [category: string]: Array<GhosteryMatch> } = {};
+  let combinedMatches: { [id: string]: Array<GhosteryMatch> } = {};
 
   matched.forEach(element => {
     if (element.length > 0) {
       element.forEach(match => {
-        if (combinedMatches[match.pattern.ghostery_id] === undefined) {
-          combinedMatches[match.pattern.ghostery_id] = [];
+        if (combinedMatches[`m-${match.pattern.ghostery_id}`] === undefined) {
+          combinedMatches[`m-${match.pattern.ghostery_id}`] = [];
         }
-        combinedMatches[match.pattern.ghostery_id].push(match);
+        combinedMatches[`m-${match.pattern.ghostery_id}`].push(match);
       });
     }
   });
@@ -205,19 +180,20 @@ const PiechartDrilldownList = (props: { category: string }) => {
 
   let stack = [];
   for (let key in sortedMatches) {
-    stack.push(<GhosteryListItem match={sortedMatches[key][0]} count={sortedMatches[key].length}></GhosteryListItem>);
+    stack.push(
+      <GhosteryListItem match={sortedMatches[key][0]} count={sortedMatches[key].length} key={key}></GhosteryListItem>,
+    );
   }
 
   return (
     <Stack spacing={{ xs: 1, sm: 2 }} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }}>
+      <div>TEST</div>
       {stack}
     </Stack>
   );
 };
 
 const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
-  console.log(data[slice.dataIndex]);
-
   let previousStack = document.getElementById('piechart-drilldown-stack');
 
   if (previousStack != null) {
@@ -313,18 +289,20 @@ const waitForGhosteryData = async () => {
       }
 
       createRoot(pieChart).render(
-        <PieChart
-          colors={mangoFusionPalette}
-          series={[
-            {
-              data: data,
-              highlightScope: { fade: 'global', highlight: 'item' },
-            },
-          ]}
-          width={200}
-          height={200}
-          onItemClick={(_event, slice) => logPieChart(slice, data)}
-        />,
+        <Box>
+          <PieChart
+            colors={mangoFusionPalette}
+            series={[
+              {
+                data: data,
+                highlightScope: { fade: 'global', highlight: 'item' },
+              },
+            ]}
+            width={200}
+            height={200}
+            onItemClick={(_event, slice) => logPieChart(slice, data)}
+          />
+        </Box>,
       );
     });
   } else {

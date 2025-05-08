@@ -19,6 +19,14 @@ const Item = styled(Paper)(({ theme }) => ({
   }),
 }));
 
+const GetFlagEmoji = (countryCode: string) => {
+  let codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
+
 const GhosteryListItem = (props: GhosteryListItemProps) => {
   return (
     <Item>
@@ -28,9 +36,12 @@ const GhosteryListItem = (props: GhosteryListItemProps) => {
       <div className="match-category-name">{props.match.category?.name}</div>
       <div className="match-category-desc">{props.match.category?.description}</div>
       <br></br>
-      <div className="match-org-name">{props.match.organization?.name}</div>
+      <div className="match-org-name">
+        {props.match.organization?.name}{' '}
+        {props.match.organization?.country != null && GetFlagEmoji(props.match.organization?.country)}
+      </div>
       <div className="match-org-desc">{props.match.organization?.description}</div>
-      <div className="match-org-country">Based in: {props.match.organization?.country}</div>
+
       <a href={props.match.organization?.website_url} className="matchOrgSite">
         Website
       </a>
