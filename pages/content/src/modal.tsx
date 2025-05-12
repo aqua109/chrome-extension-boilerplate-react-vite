@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { BarLoader } from 'react-spinners';
 import { styled } from '@mui/material/styles';
 import LinearProgress, { linearProgressClasses, LinearProgressProps } from '@mui/material/LinearProgress';
 import Typography from '@mui/material/Typography';
@@ -12,22 +11,14 @@ type ModalProps = {
 
 const Modal = (props: ModalProps) => {
   const [modal, setModal] = useState(true);
-  const [loading, setLoading] = useState(true);
 
   const toggleModal = () => {
     setModal(!modal);
 
     if (modal) {
-      var modalDiv = document.getElementById('ai-summary-modal');
+      var modalDiv = document.getElementById('privacy-pal-modal');
       modalDiv?.remove();
-
-      var modalStyle = document.getElementById('ai-summary-style');
-      modalStyle?.remove();
     }
-  };
-
-  const toggleLoading = () => {
-    setLoading(!loading);
   };
 
   const IndeterminateLoadingBar = styled(LinearProgress)(({ theme }) => ({

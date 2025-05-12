@@ -7,7 +7,9 @@ import Box from '@mui/material/Box';
 import { GhosteryMatch, TrackingReponse } from './ghostery-tracking-response';
 import { mangoFusionPalette, PieChart, PieItemIdentifier, PieValueType } from '@mui/x-charts';
 import GhosteryListItem from './ghostery-list-item';
-import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { CacheProvider } from '@emotion/react';
+import createCache from '@emotion/cache';
+import { createTheme } from '@mui/material';
 
 let ghosteryData: TrackingReponse;
 let pageScanTimeRemaining: number = 10;
@@ -16,7 +18,7 @@ let previousPieChartIndex: number = -1;
 const runOnStart = async () => {
   await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
   while (pageScanTimeRemaining <= 100) {
-    console.log(pageScanTimeRemaining);
+    // console.log(pageScanTimeRemaining);
     await sleep(1000);
     pageScanTimeRemaining += 10;
   }
@@ -108,8 +110,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'aiSummaryReturned':
-      var modalTitle = document.getElementById('ai-modal-title');
-      var loader = document.getElementById('summary-loader');
+      var modalTitle = getElementInModal('#ai-modal-title');
+      var loader = getElementInModal('#summary-loader');
       loader?.remove();
 
       switch (message.func) {
@@ -194,14 +196,14 @@ const PiechartDrilldownList = (props: { category: string }) => {
 };
 
 const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
-  let previousStack = document.getElementById('piechart-drilldown-stack');
+  let previousStack = getElementInModal('#piechart-drilldown-stack');
 
   if (previousStack != null) {
     previousStack.remove();
   }
 
   if (slice.dataIndex != previousPieChartIndex) {
-    let modalContent = document.getElementById('ai-modal-content');
+    let modalContent = getElementInModal('#ai-modal-content');
     let stack = document.createElement('div');
     stack.setAttribute('id', 'piechart-drilldown-stack');
     let styleElement = document.createElement('style');
@@ -210,10 +212,20 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
     document.body.appendChild(styleElement);
     modalContent!.appendChild(stack);
 
+    let shadowRoot = getModal()?.shadowRoot;
+
+    const cache = createCache({
+      key: 'css',
+      prepend: true,
+      container: shadowRoot!,
+    });
+
     createRoot(stack).render(
-      <Box>
-        <PiechartDrilldownList category={data[slice.dataIndex].id!.toString()}></PiechartDrilldownList>
-      </Box>,
+      <CacheProvider value={cache}>
+        <Box>
+          <PiechartDrilldownList category={data[slice.dataIndex].id!.toString()}></PiechartDrilldownList>
+        </Box>
+      </CacheProvider>,
     );
 
     previousPieChartIndex = slice.dataIndex;
@@ -226,7 +238,7 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
 const waitForElement = (selector: string) => {
   return new Promise(resolve => {
     const interval = setInterval(() => {
-      const element = document.getElementById(selector);
+      const element = getElementInModal(selector);
       if (element) {
         clearInterval(interval);
         resolve(element);
@@ -245,17 +257,17 @@ const waitForGhosteryData = async () => {
   }
 
   if (ghosteryData !== undefined) {
-    waitForElement('ai-modal-content').then(modalContent => {
-      let loader = document.getElementById('summary-loader');
+    waitForElement('#ai-modal-content').then(modalContent => {
+      let loader = getElementInModal('#summary-loader');
       loader?.remove();
 
-      let previousChart = document.getElementById('tracking-summary-chart');
+      let previousChart = getElementInModal('#tracking-summary-chart');
 
       if (previousChart != null) {
         previousChart.remove();
       }
 
-      let modalTitle = document.getElementById('ai-modal-title');
+      let modalTitle = getElementInModal('#ai-modal-title');
       modalTitle!.textContent = 'Webpage Trackers Summary';
 
       let pieChart = document.createElement('div');
@@ -288,21 +300,31 @@ const waitForGhosteryData = async () => {
         data.push(datagram);
       }
 
+      let shadowRoot = getModal()?.shadowRoot;
+
+      const cache = createCache({
+        key: 'css',
+        prepend: true,
+        container: shadowRoot!,
+      });
+
       createRoot(pieChart).render(
-        <Box>
-          <PieChart
-            colors={mangoFusionPalette}
-            series={[
-              {
-                data: data,
-                highlightScope: { fade: 'global', highlight: 'item' },
-              },
-            ]}
-            width={200}
-            height={200}
-            onItemClick={(_event, slice) => logPieChart(slice, data)}
-          />
-        </Box>,
+        <CacheProvider value={cache}>
+          <Box>
+            <PieChart
+              colors={mangoFusionPalette}
+              series={[
+                {
+                  data: data,
+                  highlightScope: { fade: 'global', highlight: 'item' },
+                },
+              ]}
+              width={200}
+              height={200}
+              onItemClick={(_event, slice) => logPieChart(slice, data)}
+            />
+          </Box>
+        </CacheProvider>,
       );
     });
   } else {
@@ -318,24 +340,56 @@ const formatSectionTextAndContent = (title: string, text: string) => {
   sectionText.setAttribute('class', 'pp-section-text');
   sectionText.textContent = text;
 
-  var modalContent = document.getElementById('ai-modal-content');
+  var modalContent = getElementInModal('#ai-modal-content');
   modalContent!.appendChild(sectionTitle);
   modalContent!.appendChild(sectionText);
 };
 
+const getElementInModal = (selector: string) => {
+  let rootElement = document.body.querySelector('#privacy-pal-modal');
+
+  if (rootElement === null) {
+    return null;
+  } else {
+    let shadowRoot = rootElement.shadowRoot;
+    return shadowRoot?.querySelector(selector);
+  }
+};
+
+const getModal = () => {
+  return document.querySelector('#privacy-pal-modal');
+};
+
 const showModal = (loadingStyle: string, timeRemaining?: number) => {
+  const appContainer = document.createElement('div');
+  appContainer.id = 'privacy-pal-modal';
+  const shadowRoot = appContainer.attachShadow({ mode: 'open' });
+
   // Only show if modal doesn't already exist
-  if (document.getElementById('ai-summary-modal') === null) {
+  if (getModal() === null) {
     const root = document.createElement('div');
-    root.setAttribute('id', 'ai-summary-modal');
+    root.id = 'privacy-pal-modal';
+
     document.body.appendChild(root);
+
+    const shadowRoot = root.attachShadow({ mode: 'open' });
 
     const styleElement = document.createElement('style');
     styleElement.setAttribute('id', 'ai-summary-style');
     styleElement.textContent = injectedStyle;
-    document.body.appendChild(styleElement);
+    shadowRoot.appendChild(styleElement);
 
-    createRoot(root).render(<Modal loadingStyle={loadingStyle} timeRemaining={timeRemaining} />);
+    const cache = createCache({
+      key: 'css',
+      prepend: true,
+      container: shadowRoot,
+    });
+
+    createRoot(shadowRoot).render(
+      <CacheProvider value={cache}>
+        <Modal loadingStyle={loadingStyle} timeRemaining={timeRemaining} />
+      </CacheProvider>,
+    );
   }
 };
 
