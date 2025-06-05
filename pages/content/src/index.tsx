@@ -9,7 +9,13 @@ import { mangoFusionPalette, PieChart, PieItemIdentifier, PieValueType } from '@
 import GhosteryListItem from './ghostery-list-item';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
-import { createTheme } from '@mui/material';
+import { createTheme, Fab } from '@mui/material';
+
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import NavigationIcon from '@mui/icons-material/Navigation';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 let ghosteryData: TrackingReponse;
 let pageScanTimeRemaining: number = 10;
@@ -36,23 +42,54 @@ const enableClickToAISummary = async (func: string) => {
       document.addEventListener('click', trackingClickListener);
       break;
   }
+
+  document.addEventListener('contextmenu', cancelRightClickListener);
 };
 
 const summariseClickListener = async (e: MouseEvent) => {
+  e.preventDefault();
   if (e.target instanceof HTMLElement) {
-    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'summarise' });
-    e.target.classList.remove('pp-target-hover');
-    disableDivHighlighting();
-    showModal('Indeterminate');
+    if (e.target.id == 'privacy-pal-fab') {
+      cancelDivHighlighting(e.target);
+    } else {
+      await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'summarise' });
+      e.target.classList.remove('pp-target-hover');
+      disableDivHighlighting();
+      showModal('Indeterminate');
+    }
   }
 };
 
 const trackingClickListener = async (e: MouseEvent) => {
   if (e.target instanceof HTMLElement) {
-    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'tracking' });
-    e.target.classList.remove('pp-target-hover');
-    disableDivHighlighting();
-    showModal('Indeterminate');
+    if (e.target.id == 'privacy-pal-fab') {
+      cancelDivHighlighting(e.target);
+    } else {
+      await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'tracking' });
+      e.target.classList.remove('pp-target-hover');
+      disableDivHighlighting();
+      showModal('Indeterminate');
+    }
+  }
+};
+
+const cancelRightClickListener = async (e: MouseEvent) => {
+  e.preventDefault();
+  if (e.target instanceof HTMLElement) {
+    if (e.target.id != 'privacy-pal-fab') {
+      cancelDivHighlighting(e.target);
+    }
+  }
+};
+
+const cancelDivHighlighting = (target: HTMLElement) => {
+  target.classList.remove('pp-target-hover');
+  disableDivHighlighting();
+
+  const cancelFab = document.getElementById('privacy-pal-fab');
+
+  if (cancelFab != null) {
+    cancelFab.remove();
   }
 };
 
@@ -87,6 +124,39 @@ const enableDivHighlighting = async (func: string) => {
   document.body.appendChild(highlight);
   document.addEventListener('mouseover', mouseOverListener);
   document.addEventListener('mouseout', mouseOutListener);
+
+  // Testing adding cancel button
+  const cancelFab = document.getElementById('privacy-pal-fab');
+
+  if (cancelFab == null) {
+    const root = document.createElement('div');
+    root.id = 'privacy-pal-fab';
+    document.body.appendChild(root);
+    const shadowRoot = root.attachShadow({ mode: 'open' });
+
+    const cache = createCache({
+      key: 'css',
+      prepend: true,
+      container: shadowRoot,
+    });
+
+    createRoot(shadowRoot).render(
+      <CacheProvider value={cache}>
+        <Box
+          sx={{
+            zIndex: 'tooltip',
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+          }}>
+          <Fab color="error" aria-label="cancel" variant="extended">
+            <CancelIcon sx={{ mr: 1 }} />
+            Cancel
+          </Fab>
+        </Box>
+      </CacheProvider>,
+    );
+  }
 
   enableClickToAISummary(func);
 };
@@ -189,7 +259,7 @@ const PiechartDrilldownList = (props: { category: string }) => {
 
   return (
     <Stack spacing={{ xs: 1, sm: 2 }} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }}>
-      <div>TEST</div>
+      <div></div>
       {stack}
     </Stack>
   );
@@ -361,12 +431,16 @@ const getModal = () => {
 };
 
 const showModal = (loadingStyle: string, timeRemaining?: number) => {
-  const appContainer = document.createElement('div');
-  appContainer.id = 'privacy-pal-modal';
-  const shadowRoot = appContainer.attachShadow({ mode: 'open' });
+  const cancelFab = document.getElementById('privacy-pal-fab');
+
+  if (cancelFab != null) {
+    cancelFab.remove();
+  }
 
   // Only show if modal doesn't already exist
   if (getModal() === null) {
+    const appContainer = document.createElement('div');
+    appContainer.id = 'privacy-pal-modal';
     const root = document.createElement('div');
     root.id = 'privacy-pal-modal';
 
