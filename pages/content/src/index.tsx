@@ -9,13 +9,7 @@ import { mangoFusionPalette, PieChart, PieItemIdentifier, PieValueType } from '@
 import GhosteryListItem from './ghostery-list-item';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
-import { createTheme, Fab } from '@mui/material';
-
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import NavigationIcon from '@mui/icons-material/Navigation';
-import CancelIcon from '@mui/icons-material/Cancel';
+import { Fab } from '@mui/material';
 
 let ghosteryData: TrackingReponse;
 let pageScanTimeRemaining: number = 10;
@@ -24,7 +18,6 @@ let previousPieChartIndex: number = -1;
 const runOnStart = async () => {
   await chrome.runtime.sendMessage({ type: 'initiatePageScanner' });
   while (pageScanTimeRemaining <= 100) {
-    // console.log(pageScanTimeRemaining);
     await sleep(1000);
     pageScanTimeRemaining += 10;
   }
@@ -49,27 +42,20 @@ const enableClickToAISummary = async (func: string) => {
 const summariseClickListener = async (e: MouseEvent) => {
   e.preventDefault();
   if (e.target instanceof HTMLElement) {
-    if (e.target.id == 'privacy-pal-fab') {
-      cancelDivHighlighting(e.target);
-    } else {
-      await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'summarise' });
-      e.target.classList.remove('pp-target-hover');
-      disableDivHighlighting();
-      showModal('Indeterminate');
-    }
+    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'summarise' });
+    e.target.classList.remove('pp-target-hover');
+    disableDivHighlighting();
+    showModal('Indeterminate');
   }
 };
 
 const trackingClickListener = async (e: MouseEvent) => {
+  e.preventDefault();
   if (e.target instanceof HTMLElement) {
-    if (e.target.id == 'privacy-pal-fab') {
-      cancelDivHighlighting(e.target);
-    } else {
-      await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'tracking' });
-      e.target.classList.remove('pp-target-hover');
-      disableDivHighlighting();
-      showModal('Indeterminate');
-    }
+    await chrome.runtime.sendMessage({ type: 'queryGemini', data: e.target.innerText, func: 'tracking' });
+    e.target.classList.remove('pp-target-hover');
+    disableDivHighlighting();
+    showModal('Indeterminate');
   }
 };
 
@@ -84,6 +70,11 @@ const cancelRightClickListener = async (e: MouseEvent) => {
 
 const cancelDivHighlighting = (target: HTMLElement) => {
   target.classList.remove('pp-target-hover');
+
+  cancelHighlighting();
+};
+
+const cancelHighlighting = () => {
   disableDivHighlighting();
 
   const cancelFab = document.getElementById('privacy-pal-fab');
@@ -91,6 +82,12 @@ const cancelDivHighlighting = (target: HTMLElement) => {
   if (cancelFab != null) {
     cancelFab.remove();
   }
+};
+
+const selectAllTextForSummary = async (func: string) => {
+  cancelHighlighting();
+  await chrome.runtime.sendMessage({ type: 'queryGemini', data: document.body.innerText, func: func });
+  showModal('Indeterminate');
 };
 
 const mouseOverListener = async (e: MouseEvent) => {
@@ -125,7 +122,6 @@ const enableDivHighlighting = async (func: string) => {
   document.addEventListener('mouseover', mouseOverListener);
   document.addEventListener('mouseout', mouseOutListener);
 
-  // Testing adding cancel button
   const cancelFab = document.getElementById('privacy-pal-fab');
 
   if (cancelFab == null) {
@@ -142,18 +138,21 @@ const enableDivHighlighting = async (func: string) => {
 
     createRoot(shadowRoot).render(
       <CacheProvider value={cache}>
-        <Box
+        <Stack
+          spacing={2}
           sx={{
             zIndex: 'tooltip',
             position: 'fixed',
             bottom: 16,
             right: 16,
           }}>
-          <Fab color="error" aria-label="cancel" variant="extended">
-            <CancelIcon sx={{ mr: 1 }} />
+          <Fab color="primary" aria-label="select all" variant="extended" onClick={() => selectAllTextForSummary(func)}>
+            Select All
+          </Fab>
+          <Fab color="error" aria-label="cancel" variant="extended" onClick={cancelHighlighting}>
             Cancel
           </Fab>
-        </Box>
+        </Stack>
       </CacheProvider>,
     );
   }
