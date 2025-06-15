@@ -391,6 +391,7 @@ const waitForGhosteryData = async () => {
               width={200}
               height={200}
               onItemClick={(_event, slice) => logPieChart(slice, data)}
+              slotProps={{ tooltip: { disablePortal: false, container: pieChart } }}
             />
           </Box>
         </CacheProvider>,

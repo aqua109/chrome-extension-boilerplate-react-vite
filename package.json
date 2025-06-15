@@ -45,8 +45,8 @@
     "@fontsource/roboto": "^5.2.5",
     "@ghostery/trackerdb": "^1.0.502",
     "@mui/icons-material": "^7.1.1",
-    "@mui/material": "^7.0.2",
-    "@mui/x-charts": "8.0.0-beta.3",
+    "@mui/material": "^7.1.1",
+    "@mui/x-charts": "8.5.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-spinners": "^0.15.0"
