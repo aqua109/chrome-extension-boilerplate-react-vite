@@ -103,6 +103,7 @@ const mouseOutListener = async (e: MouseEvent) => {
 };
 
 const enableDivHighlighting = async (func: string) => {
+  hideModal();
   const highlight = document.createElement('style');
   highlight.id = 'highlight-style-element';
 
@@ -325,6 +326,7 @@ const waitForElement = (selector: string) => {
 };
 
 const waitForGhosteryData = async () => {
+  hideModal();
   showModal('Determinate', pageScanTimeRemaining);
   let count = 0;
 
@@ -436,6 +438,14 @@ const getElementInModal = (selector: string) => {
 
 const getModal = () => {
   return document.querySelector('#privacy-pal-modal');
+};
+
+const hideModal = () => {
+  let modal = getModal();
+
+  if (modal != null) {
+    modal.remove();
+  }
 };
 
 const showModal = (loadingStyle: string, timeRemaining?: number) => {
