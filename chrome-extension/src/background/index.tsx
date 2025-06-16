@@ -124,6 +124,8 @@ const termsAndConditionsGeminiQuery = async (text: string) => {
       console.log('Failed to find T&Cs');
     }
 
+    console.log(summaryJson!);
+
     chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
       if (tab[0] != null) {
         chrome.tabs.sendMessage(tab[0].id!, {
@@ -143,9 +145,21 @@ const termsAndConditionsGeminiQuery = async (text: string) => {
 const trackingGeminiQuery = async (text: string) => {
   try {
     interface geminiTrackingResponse {
-      section: string;
-      summary: string;
+      summary: Array<geminiTrackingObject>;
     }
+
+    interface geminiTrackingObject {
+      data_collection: string;
+      tracking: string;
+      privacy: string;
+      data_retention: string;
+      data_selling: string;
+    }
+
+    // interface geminiTrackingResponse {
+    //   section: string;
+    //   summary: string;
+    // }
 
     let trackingJson: geminiTrackingResponse;
 
@@ -174,11 +188,14 @@ const trackingGeminiQuery = async (text: string) => {
     const queryKey: jsonKey = 'containstracking';
 
     if (queryJsonResponse[queryKey]) {
-      const trackingPrompt = `For the given text, return a JSON object that denotes which sections contain references to tracking or data collection and the relevant text from these sections. Summarise the relevant text using this format: [ { "section": string, "summary": string } ] Text: "${text}"`;
+      const trackingPrompt = `Summarise the given text concisely (less than 100 words), in a structured way and provide 1-2 sentences on what this info means regarding user data collection and tracking. If a section is not specified or applicable remove it from the json. Replace " with '. Use the following json schema as an example. Schema: {"summary":{"data collection":"text","tracking":"text","privacy":"text","data retention":"text","data selling":"text"}. Text: "${text}"`;
+      // const trackingPrompt = `For the given text, return a JSON object that denotes which sections contain references to tracking or data collection and the relevant text from these sections. Summarise the relevant text using this format: [ { "section": string, "summary": string } ] Text: "${text}"`;
       const trackingResult = await model.generateContent(trackingPrompt);
       const trackingResponse = trackingResult.response.text();
 
       trackingJson = JSON.parse(trackingResponse.replaceAll(/(`{3}json|`{3})/g, ''));
+
+      console.log(trackingJson);
     } else {
       console.log('Failed to find any details relating to tracking or data collection');
     }
@@ -192,7 +209,11 @@ const trackingGeminiQuery = async (text: string) => {
 
     chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
       if (tab[0] != null) {
-        chrome.tabs.sendMessage(tab[0].id!, { type: 'aiSummaryReturned', data: trackingJson, func: 'tracking' });
+        chrome.tabs.sendMessage(tab[0].id!, {
+          type: 'aiSummaryReturned',
+          data: typeof trackingJson?.summary !== 'undefined' ? trackingJson.summary : '',
+          func: 'tracking',
+        });
       }
     });
   } catch (error) {

@@ -202,10 +202,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'tracking':
           modalTitle!.textContent = 'Tracking & Data Collection References';
-          if (message.data != '' && typeof message.data !== 'undefined') {
-            for (let item of message.data) {
-              formatSectionTextAndContent(toTitleCase(item.section), item.summary);
-            }
+          // if (message.data != '' && typeof message.data !== 'undefined') {
+          //   for (let item of message.data) {
+          //     formatSectionTextAndContent(toTitleCase(item.section), item.summary);
+          //   }
+          // }
+          if (message.data != '') {
+            Object.entries(message.data).forEach(([key, value]) => {
+              if ((value as string).length > 10) {
+                formatSectionTextAndContent(toTitleCase(key), value as string);
+              }
+            });
           } else {
             formatSectionTextAndContent(
               '',
@@ -278,16 +285,17 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
     let styleElement = document.createElement('style');
     styleElement.setAttribute('id', 'piechart-stack-style');
     styleElement.textContent = listStyle;
-    document.body.appendChild(styleElement);
     modalContent!.appendChild(stack);
 
     let shadowRoot = getModal()?.shadowRoot;
-
+    console.log(shadowRoot);
     const cache = createCache({
       key: 'css',
       prepend: true,
       container: shadowRoot!,
     });
+
+    shadowRoot!.appendChild(styleElement);
 
     createRoot(stack).render(
       <CacheProvider value={cache}>
