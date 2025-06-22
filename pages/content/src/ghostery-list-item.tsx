@@ -5,9 +5,10 @@ import { GhosteryMatch } from './ghostery-tracking-response';
 type GhosteryListItemProps = {
   match: GhosteryMatch;
   count: number;
+  colour: string;
 };
 
-const Item = styled(Paper)(({ theme }) => ({
+const Item = styled(Paper, { shouldForwardProp: prop => prop !== 'sx' })(({ theme }) => ({
   backgroundColor: '#fff',
   ...theme.typography.body2,
   padding: theme.spacing(1),
@@ -29,7 +30,7 @@ const GetFlagEmoji = (countryCode: string) => {
 
 const GhosteryListItem = (props: GhosteryListItemProps) => {
   return (
-    <Item>
+    <Item sx={{ borderLeft: `5px solid ${props.colour}` }}>
       <div className="match-pattern-name">
         {props.match.pattern.name} {props.count > 1 ? `(${props.count})` : ''}
       </div>

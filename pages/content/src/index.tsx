@@ -260,7 +260,11 @@ const PiechartDrilldownList = (props: { category: string }) => {
   let stack = [];
   for (let key in sortedMatches) {
     stack.push(
-      <GhosteryListItem match={sortedMatches[key][0]} count={sortedMatches[key].length} key={key}></GhosteryListItem>,
+      <GhosteryListItem
+        match={sortedMatches[key][0]}
+        count={sortedMatches[key].length}
+        colour={sortedMatches[key][0].category.color}
+        key={key}></GhosteryListItem>,
     );
   }
 
@@ -374,6 +378,7 @@ const waitForGhosteryData = async () => {
           id: key,
           value: sortedCategories[key].length,
           label: `${toTitleCase(key)}`,
+          color: sortedCategories[key][0].category.color,
         };
 
         data.push(datagram);
@@ -391,7 +396,6 @@ const waitForGhosteryData = async () => {
         <CacheProvider value={cache}>
           <Box>
             <PieChart
-              colors={mangoFusionPalette}
               series={[
                 {
                   data: data,
