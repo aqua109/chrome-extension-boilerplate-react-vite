@@ -36,20 +36,39 @@ const GhosteryListItem = (props: GhosteryListItemProps) => {
       </div>
       <div className="match-category-name">{props.match.category?.name}</div>
       <div className="match-category-desc">{props.match.category?.description}</div>
-      <br></br>
-      <div className="match-org-name">
-        {props.match.organization?.name}{' '}
-        {props.match.organization?.country != null && GetFlagEmoji(props.match.organization?.country)}
-      </div>
-      <div className="match-org-desc">{props.match.organization?.description}</div>
 
-      <a href={props.match.organization?.website_url} className="matchOrgSite">
-        Website
-      </a>
-      <br></br>
-      <a href={props.match.organization?.privacy_policy_url} className="matchOrgSite">
-        Privacy Policy
-      </a>
+      {(props.match.organization?.name ?? false) && (
+        <>
+          <br></br>
+          <div className="match-org-name">
+            {props.match.organization?.name}{' '}
+            {props.match.organization?.country != null && GetFlagEmoji(props.match.organization?.country)}
+          </div>
+        </>
+      )}
+
+      {(props.match.organization?.description ?? false) && (
+        <>
+          <div className="match-org-desc">{props.match.organization?.description}</div>
+        </>
+      )}
+
+      {(props.match.organization?.website_url ?? false) && (
+        <>
+          <a href={props.match.organization?.website_url} className="matchOrgSite">
+            Website
+          </a>
+          <br></br>
+        </>
+      )}
+
+      {(props.match.organization?.privacy_policy_url ?? false) && (
+        <>
+          <a href={props.match.organization?.privacy_policy_url} className="matchOrgSite">
+            Privacy Policy
+          </a>
+        </>
+      )}
     </Item>
   );
 };

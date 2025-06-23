@@ -9,7 +9,8 @@ import { mangoFusionPalette, PieChart, PieItemIdentifier, PieValueType } from '@
 import GhosteryListItem from './ghostery-list-item';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
-import { Fab } from '@mui/material';
+import { Fab, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { useState } from 'react';
 
 let ghosteryData: TrackingReponse;
 let pageScanTimeRemaining: number = 10;
@@ -229,13 +230,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'displayScanResults':
-      waitForGhosteryData();
+      waitForGhosteryData('category');
       break;
   }
 });
 
 const sleep = async (ms: number) => {
   return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+const PieChartToggleViewButton = () => {
+  const [type, setType] = useState('category');
+
+  const handleChange = (event: React.MouseEvent<HTMLElement>, newType: string) => {
+    if (newType !== null) {
+      // setType(newType);
+      console.log(newType);
+      waitForGhosteryData(newType);
+    }
+  };
+
+  return (
+    <ToggleButtonGroup
+      color="primary"
+      value={type}
+      exclusive
+      onChange={handleChange}
+      size="small"
+      aria-label="Pie Chart Type"
+      sx={{ marginBottom: 2 }}>
+      <ToggleButton value="category" sx={{ width: 200 }}>
+        Category
+      </ToggleButton>
+      <ToggleButton value="organisation" sx={{ width: 200 }}>
+        Organisation
+      </ToggleButton>
+    </ToggleButtonGroup>
+  );
 };
 
 const PiechartDrilldownList = (props: { category: string }) => {
@@ -269,10 +300,11 @@ const PiechartDrilldownList = (props: { category: string }) => {
   }
 
   return (
-    <Stack spacing={{ xs: 1, sm: 2 }} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }}>
-      <div></div>
-      {stack}
-    </Stack>
+    <>
+      <Stack spacing={{ xs: 1, sm: 2 }} direction="row" useFlexGap sx={{ flexWrap: 'wrap' }}>
+        {stack}
+      </Stack>
+    </>
   );
 };
 
@@ -293,7 +325,6 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
     modalContent!.appendChild(stack);
 
     let shadowRoot = getModal()?.shadowRoot;
-    console.log(shadowRoot);
     const cache = createCache({
       key: 'css',
       prepend: true,
@@ -329,7 +360,8 @@ const waitForElement = (selector: string) => {
   });
 };
 
-const waitForGhosteryData = async () => {
+const waitForGhosteryData = async (type: string) => {
+  console.log(type);
   hideModal();
   showModal('Determinate', pageScanTimeRemaining);
   let count = 0;
@@ -358,30 +390,66 @@ const waitForGhosteryData = async () => {
       (modalContent as HTMLElement).appendChild(pieChart);
 
       let data: Array<PieValueType> = new Array();
-      let categories: { [category: string]: Array<GhosteryMatch> } = {};
+      let ghosteryTypes: { [category: string]: Array<GhosteryMatch> } = {};
 
-      ghosteryData.forEach(element => {
-        if (element.length > 0) {
-          element.forEach(match => {
-            if (categories[match.category.key] === undefined) {
-              categories[match.category.key] = [];
+      switch (type) {
+        case 'category':
+          ghosteryData.forEach(element => {
+            if (element.length > 0) {
+              element.forEach(match => {
+                if (ghosteryTypes[match.category.key] === undefined) {
+                  ghosteryTypes[match.category.key] = [];
+                }
+                ghosteryTypes[match.category.key].push(match);
+              });
             }
-            categories[match.category.key].push(match);
           });
-        }
-      });
 
-      let sortedCategories = Object.fromEntries(Object.entries(categories).sort((a, b) => b[1].length - a[1].length));
+          let sortedCategories = Object.fromEntries(
+            Object.entries(ghosteryTypes).sort((a, b) => b[1].length - a[1].length),
+          );
 
-      for (let key in sortedCategories) {
-        let datagram: PieValueType = {
-          id: key,
-          value: sortedCategories[key].length,
-          label: `${toTitleCase(key)}`,
-          color: sortedCategories[key][0].category.color,
-        };
+          for (let key in sortedCategories) {
+            let datagram: PieValueType = {
+              id: key,
+              value: sortedCategories[key].length,
+              label: `${toTitleCase(key)}`,
+              color: sortedCategories[key][0].category.color,
+            };
 
-        data.push(datagram);
+            data.push(datagram);
+          }
+          break;
+
+        case 'organisation':
+          ghosteryData.forEach(element => {
+            if (element.length > 0) {
+              element.forEach(match => {
+                if (match.organization?.key ?? false) {
+                  if (ghosteryTypes[match.organization?.key] === undefined) {
+                    ghosteryTypes[match.organization.key] = [];
+                  }
+                  ghosteryTypes[match.organization.key].push(match);
+                }
+              });
+            }
+          });
+
+          let sortedOrganisations = Object.fromEntries(
+            Object.entries(ghosteryTypes).sort((a, b) => b[1].length - a[1].length),
+          );
+
+          for (let key in sortedOrganisations) {
+            let datagram: PieValueType = {
+              id: key,
+              value: sortedOrganisations[key].length,
+              label: `${toTitleCase(key)}`,
+              color: sortedOrganisations[key][0].category.color,
+            };
+
+            data.push(datagram);
+          }
+          break;
       }
 
       let shadowRoot = getModal()?.shadowRoot;
@@ -394,7 +462,12 @@ const waitForGhosteryData = async () => {
 
       createRoot(pieChart).render(
         <CacheProvider value={cache}>
-          <Box>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}>
             <PieChart
               series={[
                 {
@@ -406,7 +479,10 @@ const waitForGhosteryData = async () => {
               height={200}
               onItemClick={(_event, slice) => logPieChart(slice, data)}
               slotProps={{ tooltip: { disablePortal: false, container: pieChart } }}
+              sx={{ marginBottom: 2 }}
             />
+
+            <PieChartToggleViewButton />
           </Box>
         </CacheProvider>,
       );

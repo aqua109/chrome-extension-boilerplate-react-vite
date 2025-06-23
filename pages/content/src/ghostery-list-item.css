@@ -14,3 +14,19 @@
     font-style: italic;
 }
 
+a:link {
+    font-size: 14px;
+    color: #4c2980;
+}
+
+a:visited {
+    color: #160136
+}
+
+a:hover {
+    color: #6f42b3
+}
+
+a:active {
+    color: #4c2980;
+}
