@@ -204,11 +204,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'tracking':
           modalTitle!.textContent = 'Tracking & Data Collection References';
-          // if (message.data != '' && typeof message.data !== 'undefined') {
-          //   for (let item of message.data) {
-          //     formatSectionTextAndContent(toTitleCase(item.section), item.summary);
-          //   }
-          // }
           if (message.data != '') {
             Object.entries(message.data).forEach(([key, value]) => {
               if ((value as string).length > 10) {
@@ -239,14 +234,13 @@ const sleep = async (ms: number) => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
-const PieChartToggleViewButton = () => {
-  const [type, setType] = useState('category');
+const PieChartToggleViewButton = (props: { initialType: string }) => {
+  const [type, setType] = useState(props.initialType);
 
   const handleChange = (event: React.MouseEvent<HTMLElement>, newType: string) => {
     if (newType !== null) {
-      // setType(newType);
-      console.log(newType);
-      waitForGhosteryData(newType);
+      setupPieChart(newType);
+      setType(newType);
     }
   };
 
@@ -259,44 +253,83 @@ const PieChartToggleViewButton = () => {
       size="small"
       aria-label="Pie Chart Type"
       sx={{ marginBottom: 2 }}>
-      <ToggleButton value="category" sx={{ width: 200 }}>
+      <ToggleButton value="category" sx={{ width: 200 }} disableRipple>
         Category
       </ToggleButton>
-      <ToggleButton value="organisation" sx={{ width: 200 }}>
+      <ToggleButton value="organisation" sx={{ width: 200 }} disableRipple>
         Organisation
       </ToggleButton>
     </ToggleButtonGroup>
   );
 };
 
-const PiechartDrilldownList = (props: { category: string }) => {
-  // Filter Ghostery Data on category
-  let matched = ghosteryData.filter(match => match[0].category.key == props.category);
-  // Combine matches that have the same ghostery id
-  let combinedMatches: { [id: string]: Array<GhosteryMatch> } = {};
-
-  matched.forEach(element => {
-    if (element.length > 0) {
-      element.forEach(match => {
-        if (combinedMatches[`m-${match.pattern.ghostery_id}`] === undefined) {
-          combinedMatches[`m-${match.pattern.ghostery_id}`] = [];
-        }
-        combinedMatches[`m-${match.pattern.ghostery_id}`].push(match);
-      });
-    }
-  });
-
-  let sortedMatches = Object.fromEntries(Object.entries(combinedMatches).sort((a, b) => b[1].length - a[1].length));
-
+const PiechartDrilldownList = (props: { category: string; pieType: string }) => {
   let stack = [];
-  for (let key in sortedMatches) {
-    stack.push(
-      <GhosteryListItem
-        match={sortedMatches[key][0]}
-        count={sortedMatches[key].length}
-        colour={sortedMatches[key][0].category.color}
-        key={key}></GhosteryListItem>,
-    );
+  let sortedMatches;
+  switch (props.pieType) {
+    case 'category':
+      // Filter Ghostery Data on category
+      let matchedCategories = ghosteryData.filter(match => match[0].category?.key == props.category);
+      // Combine matches that have the same ghostery id
+      let combinedCategoryMatches: { [id: string]: Array<GhosteryMatch> } = {};
+
+      matchedCategories.forEach(element => {
+        if (element.length > 0) {
+          element.forEach(match => {
+            if (combinedCategoryMatches[`m-${match.pattern.ghostery_id}`] === undefined) {
+              combinedCategoryMatches[`m-${match.pattern.ghostery_id}`] = [];
+            }
+            combinedCategoryMatches[`m-${match.pattern.ghostery_id}`].push(match);
+          });
+        }
+      });
+
+      sortedMatches = Object.fromEntries(
+        Object.entries(combinedCategoryMatches).sort((a, b) => b[1].length - a[1].length),
+      );
+
+      for (let key in sortedMatches) {
+        stack.push(
+          <GhosteryListItem
+            match={sortedMatches[key][0]}
+            count={sortedMatches[key].length}
+            colour={sortedMatches[key][0].category.color}
+            key={key}></GhosteryListItem>,
+        );
+      }
+      break;
+
+    case 'organisation':
+      // Filter Ghostery Data on organisation
+      let matched = ghosteryData.filter(match => match[0].organization?.key == props.category);
+      // Combine matches that have the same ghostery id
+      let combinedMatches: { [id: string]: Array<GhosteryMatch> } = {};
+
+      matched.forEach(element => {
+        if (element.length > 0) {
+          element.forEach(match => {
+            if (combinedMatches[`m-${match.pattern.ghostery_id}`] === undefined) {
+              combinedMatches[`m-${match.pattern.ghostery_id}`] = [];
+            }
+            combinedMatches[`m-${match.pattern.ghostery_id}`].push(match);
+          });
+        }
+      });
+
+      sortedMatches = Object.fromEntries(Object.entries(combinedMatches).sort((a, b) => b[1].length - a[1].length));
+
+      for (let key in sortedMatches) {
+        let id = sortedMatches[key][0].organization.ghostery_id ?? 1;
+
+        stack.push(
+          <GhosteryListItem
+            match={sortedMatches[key][0]}
+            count={sortedMatches[key].length}
+            colour={hslFromID(id)}
+            key={key}></GhosteryListItem>,
+        );
+      }
+      break;
   }
 
   return (
@@ -308,7 +341,7 @@ const PiechartDrilldownList = (props: { category: string }) => {
   );
 };
 
-const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
+const drilldownOnPieSlice = (slice: PieItemIdentifier, data: Array<PieValueType>, pieType: string) => {
   let previousStack = getElementInModal('#piechart-drilldown-stack');
 
   if (previousStack != null) {
@@ -336,7 +369,7 @@ const logPieChart = (slice: PieItemIdentifier, data: Array<PieValueType>) => {
     createRoot(stack).render(
       <CacheProvider value={cache}>
         <Box>
-          <PiechartDrilldownList category={data[slice.dataIndex].id!.toString()}></PiechartDrilldownList>
+          <PiechartDrilldownList category={data[slice.dataIndex].id!.toString()} pieType={pieType} />
         </Box>
       </CacheProvider>,
     );
@@ -361,7 +394,6 @@ const waitForElement = (selector: string) => {
 };
 
 const waitForGhosteryData = async (type: string) => {
-  console.log(type);
   hideModal();
   showModal('Determinate', pageScanTimeRemaining);
   let count = 0;
@@ -372,124 +404,170 @@ const waitForGhosteryData = async (type: string) => {
   }
 
   if (ghosteryData !== undefined) {
-    waitForElement('#ai-modal-content').then(modalContent => {
-      let loader = getElementInModal('#summary-loader');
-      loader?.remove();
-
-      let previousChart = getElementInModal('#tracking-summary-chart');
-
-      if (previousChart != null) {
-        previousChart.remove();
-      }
-
-      let modalTitle = getElementInModal('#ai-modal-title');
-      modalTitle!.textContent = 'Webpage Trackers Summary';
-
-      let pieChart = document.createElement('div');
-      pieChart.setAttribute('id', 'tracking-summary-chart');
-      (modalContent as HTMLElement).appendChild(pieChart);
-
-      let data: Array<PieValueType> = new Array();
-      let ghosteryTypes: { [category: string]: Array<GhosteryMatch> } = {};
-
-      switch (type) {
-        case 'category':
-          ghosteryData.forEach(element => {
-            if (element.length > 0) {
-              element.forEach(match => {
-                if (ghosteryTypes[match.category.key] === undefined) {
-                  ghosteryTypes[match.category.key] = [];
-                }
-                ghosteryTypes[match.category.key].push(match);
-              });
-            }
-          });
-
-          let sortedCategories = Object.fromEntries(
-            Object.entries(ghosteryTypes).sort((a, b) => b[1].length - a[1].length),
-          );
-
-          for (let key in sortedCategories) {
-            let datagram: PieValueType = {
-              id: key,
-              value: sortedCategories[key].length,
-              label: `${toTitleCase(key)}`,
-              color: sortedCategories[key][0].category.color,
-            };
-
-            data.push(datagram);
-          }
-          break;
-
-        case 'organisation':
-          ghosteryData.forEach(element => {
-            if (element.length > 0) {
-              element.forEach(match => {
-                if (match.organization?.key ?? false) {
-                  if (ghosteryTypes[match.organization?.key] === undefined) {
-                    ghosteryTypes[match.organization.key] = [];
-                  }
-                  ghosteryTypes[match.organization.key].push(match);
-                }
-              });
-            }
-          });
-
-          let sortedOrganisations = Object.fromEntries(
-            Object.entries(ghosteryTypes).sort((a, b) => b[1].length - a[1].length),
-          );
-
-          for (let key in sortedOrganisations) {
-            let datagram: PieValueType = {
-              id: key,
-              value: sortedOrganisations[key].length,
-              label: `${toTitleCase(key)}`,
-              color: sortedOrganisations[key][0].category.color,
-            };
-
-            data.push(datagram);
-          }
-          break;
-      }
-
-      let shadowRoot = getModal()?.shadowRoot;
-
-      const cache = createCache({
-        key: 'css',
-        prepend: true,
-        container: shadowRoot!,
-      });
-
-      createRoot(pieChart).render(
-        <CacheProvider value={cache}>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}>
-            <PieChart
-              series={[
-                {
-                  data: data,
-                  highlightScope: { fade: 'global', highlight: 'item' },
-                },
-              ]}
-              width={200}
-              height={200}
-              onItemClick={(_event, slice) => logPieChart(slice, data)}
-              slotProps={{ tooltip: { disablePortal: false, container: pieChart } }}
-              sx={{ marginBottom: 2 }}
-            />
-
-            <PieChartToggleViewButton />
-          </Box>
-        </CacheProvider>,
-      );
-    });
+    setupPieChartContainer();
   } else {
     //Error
   }
+};
+
+const setupPieChartContainer = () => {
+  waitForElement('#ai-modal-content').then(modalContent => {
+    let loader = getElementInModal('#summary-loader');
+    loader?.remove();
+
+    let previousChart = getElementInModal('#tracking-summary-piechart-container');
+
+    if (previousChart != null) {
+      previousChart.remove();
+    }
+
+    let modalTitle = getElementInModal('#ai-modal-title');
+    modalTitle!.textContent = 'Webpage Trackers Summary';
+
+    let pieChartContainer = document.createElement('div');
+    pieChartContainer.setAttribute('id', 'tracking-summary-piechart-root');
+    (modalContent as HTMLElement).appendChild(pieChartContainer);
+
+    let shadowRoot = getModal()?.shadowRoot;
+
+    const cache = createCache({
+      key: 'css',
+      prepend: true,
+      container: shadowRoot!,
+    });
+
+    createRoot(pieChartContainer).render(
+      <CacheProvider value={cache}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}>
+          <div id="tracking-summary-piechart-container"></div>
+          <PieChartToggleViewButton initialType={'category'} />
+        </Box>
+      </CacheProvider>,
+    );
+  });
+
+  setupPieChart('category');
+};
+
+const setupPieChart = (type: string) => {
+  waitForElement('#tracking-summary-piechart-container').then(pieChartContainer => {
+    previousPieChartIndex = -1;
+    let previousStack = getElementInModal('#piechart-drilldown-stack');
+
+    if (previousStack != null) {
+      previousStack.remove();
+    }
+    let data: Array<PieValueType> = new Array();
+    let ghosteryTypes: { [category: string]: Array<GhosteryMatch> } = {};
+
+    switch (type) {
+      case 'category':
+        ghosteryData.forEach(element => {
+          if (element.length > 0) {
+            element.forEach(match => {
+              if (ghosteryTypes[match.category.key] === undefined) {
+                ghosteryTypes[match.category.key] = [];
+              }
+              ghosteryTypes[match.category.key].push(match);
+            });
+          }
+        });
+
+        let sortedCategories = Object.fromEntries(
+          Object.entries(ghosteryTypes).sort((a, b) => b[1].length - a[1].length),
+        );
+
+        for (let key in sortedCategories) {
+          let datagram: PieValueType = {
+            id: key,
+            value: sortedCategories[key].length,
+            label: `${toTitleCase(key)}`,
+            color: sortedCategories[key][0].category.color,
+          };
+
+          data.push(datagram);
+        }
+        break;
+
+      case 'organisation':
+        ghosteryData.forEach(element => {
+          if (element.length > 0) {
+            element.forEach(match => {
+              if (match.organization?.key ?? false) {
+                if (ghosteryTypes[match.organization?.key] === undefined) {
+                  ghosteryTypes[match.organization.key] = [];
+                }
+                ghosteryTypes[match.organization.key].push(match);
+              }
+            });
+          }
+        });
+
+        let sortedOrganisations = Object.fromEntries(
+          Object.entries(ghosteryTypes).sort((a, b) => b[1].length - a[1].length),
+        );
+
+        for (let key in sortedOrganisations) {
+          let id = sortedOrganisations[key][0].organization.ghostery_id ?? 1;
+
+          let datagram: PieValueType = {
+            id: key,
+            value: sortedOrganisations[key].length,
+            label: `${toTitleCase(key)}`,
+            color: hslFromID(id),
+          };
+
+          data.push(datagram);
+        }
+        break;
+    }
+
+    let shadowRoot = getModal()?.shadowRoot;
+
+    const cache = createCache({
+      key: 'css',
+      prepend: true,
+      container: shadowRoot!,
+    });
+
+    createRoot(pieChartContainer as Element).render(
+      <CacheProvider value={cache}>
+        <PieChart
+          id="tracking-summary-piechart"
+          series={[
+            {
+              data: data,
+              highlightScope: { fade: 'global', highlight: 'item' },
+            },
+          ]}
+          width={200}
+          height={200}
+          onItemClick={(_event, slice) => drilldownOnPieSlice(slice, data, type)}
+          slotProps={{
+            tooltip: {
+              disablePortal: false,
+              container: pieChartContainer as Element,
+            },
+            legend: {
+              sx: {
+                overflowY: 'auto',
+                flexWrap: 'nowrap',
+                height: '250px',
+              },
+            },
+          }}
+          sx={{
+            marginBottom: 2,
+          }}
+        />
+      </CacheProvider>,
+    );
+  });
 };
 
 const formatSectionTextAndContent = (title: string, text: string) => {
@@ -503,6 +581,18 @@ const formatSectionTextAndContent = (title: string, text: string) => {
   var modalContent = getElementInModal('#ai-modal-content');
   modalContent!.appendChild(sectionTitle);
   modalContent!.appendChild(sectionText);
+};
+
+const hslFromID = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  let hue = hash % 360;
+  let color = `hsl(${hue}, 50%, 65%)`;
+
+  return color;
 };
 
 const getElementInModal = (selector: string) => {

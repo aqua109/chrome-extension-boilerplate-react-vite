@@ -261,7 +261,7 @@ const initialisePageRequestLogging = async () => {
       let pageRequests: { [url: string]: number } = {};
       let listener = (e: chrome.webRequest.WebRequestBodyDetails) => pageRequestsListener(e, pageRequests);
       chrome.webRequest.onBeforeRequest.addListener(listener, { urls: [] }, []);
-      await sleep(2000);
+      await sleep(10000);
       chrome.webRequest.onBeforeRequest.removeListener(listener);
 
       if (Object.keys(pageRequests).length > 0) {
