@@ -34,6 +34,11 @@ const Popup = () => {
           onClick={() => ShowPageScannerResults()}>
           Scan for Trackers
         </button>
+        <button
+          className="mt-4 py-1 px-4 rounded shadow hover:scale-105 bg-gray-700 text-white"
+          onClick={() => chrome.runtime.openOptionsPage()}>
+          About your browser
+        </button>
       </header>
     </div>
   );
