@@ -5,6 +5,12 @@ const Options = async () => {
   const icon = 'popup/icon.svg';
   const info = await chrome.runtime.getPlatformInfo();
 
+  const plugins = chrome.management.getAll(extensions => {
+    extensions.forEach(extension => {
+      console.log(`Name: ${extension.name}, ID: ${extension.id}, Version: ${extension.version}`);
+    });
+  });
+
   return (
     <div className="App bg-gray-100">
       <header className="App-header text-gray-500 mb-3">
