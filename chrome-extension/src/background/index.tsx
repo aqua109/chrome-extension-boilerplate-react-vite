@@ -28,6 +28,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
 
     case 'readBrowserExtensions':
+      readBrowserExtensions();
+      break;
 
     case 'displayPageScanResults':
       chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
@@ -318,9 +320,14 @@ const crossReferenceTrackersWithDB = async (pageRequests: { [url: string]: numbe
 };
 
 const readBrowserExtensions = () => {
-  const plugins = chrome.management.getAll(extensions => {
-    extensions.forEach(extension => {
-      console.log(`Name: ${extension.name}, ID: ${extension.id}, Version: ${extension.version}`);
+  chrome.management.getAll(extensions => {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tab) {
+      if (tab[0] != null) {
+        chrome.tabs.sendMessage(tab[0].id!, {
+          type: 'extensionData',
+          data: extensions,
+        });
+      }
     });
   });
 };
